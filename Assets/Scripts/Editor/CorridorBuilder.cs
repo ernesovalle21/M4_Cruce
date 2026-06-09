@@ -71,6 +71,15 @@ public static class CorridorBuilder
         Material matBanqueta = GetOrCreateMat("Mat_Banqueta",      new Color32(0xB0, 0xB0, 0xB0, 0xFF));
         Material matPasto    = GetOrCreateMat("Mat_Pasto",         new Color32(0x4C, 0x8C, 0x3F, 0xFF));
         Material matFocoOff  = GetOrCreateMat("Mat_FocoApagado",   new Color32(0x20, 0x20, 0x20, 0xFF));
+        Material[] matEdificios =
+        {
+            GetOrCreateMat("Mat_Edificio1", new Color32(0x9E, 0x9E, 0x96, 0xFF)),
+            GetOrCreateMat("Mat_Edificio2", new Color32(0xC2, 0xA9, 0x84, 0xFF)),
+            GetOrCreateMat("Mat_Edificio3", new Color32(0x8A, 0x6E, 0x5D, 0xFF)),
+            GetOrCreateMat("Mat_Edificio4", new Color32(0x7C, 0x8B, 0x9E, 0xFF)),
+        };
+        Material matTronco = GetOrCreateMat("Mat_Tronco", new Color32(0x6B, 0x4A, 0x2E, 0xFF));
+        Material matHojas  = GetOrCreateMat("Mat_Hojas",  new Color32(0x2F, 0x6E, 0x2F, 0xFF));
         AssetDatabase.SaveAssets();
 
         GameObject root = new GameObject(RootName);
@@ -202,6 +211,9 @@ public static class CorridorBuilder
             }
         }
 
+        // ---- Escenografía (edificios + árboles) ----
+        BuildScenery(R, matEdificios, matTronco, matHojas);
+
         // ---- Spawner ----
         GameObject spawnerGO = new GameObject("CarSpawner");
         spawnerGO.transform.SetParent(R, false);
@@ -274,6 +286,74 @@ public static class CorridorBuilder
         go.transform.SetParent(parent, false);
         go.transform.localPosition = pos;
         return go.transform;
+    }
+
+    /// <summary>True si (x,z) cae sobre alguna calle (Elizondo o transversal) o su banqueta.</summary>
+    private static bool OverlapsRoad(float x, float z, float margin)
+    {
+        // Elizondo (banqueta incluida): |z| <= Bz+2
+        if (Mathf.Abs(z) <= Bz + 2f + margin) return true;
+        // Transversales: cerca de x del cruce
+        foreach (var c in Crosses)
+            if (Mathf.Abs(x - c.x) <= 9f + margin) return true;
+        return false;
+    }
+
+    private static void BuildScenery(Transform parent, Material[] edificios, Material tronco, Material hojas)
+    {
+        GameObject sceneRoot = new GameObject("Escenografia");
+        sceneRoot.transform.SetParent(parent, false);
+        Transform S = sceneRoot.transform;
+
+        var rng = new System.Random(12345); // semilla fija: rebuild estable
+
+        // Edificios en cuadras lejanas a las calles
+        float[] zRows = { -20f, -34f, -48f, 20f, 34f, 48f };
+        for (float bx = RoadXMin + 4f; bx <= RoadXMax - 4f; bx += 13f)
+        {
+            foreach (float bz in zRows)
+            {
+                float jx = bx + (float)(rng.NextDouble() * 4 - 2);
+                float jz = bz + (float)(rng.NextDouble() * 4 - 2);
+                if (OverlapsRoad(jx, jz, 4f)) continue;
+                if (rng.NextDouble() < 0.25) continue; // dejar huecos
+
+                float w = 5f + (float)rng.NextDouble() * 4f;
+                float d = 5f + (float)rng.NextDouble() * 4f;
+                float h = 4f + (float)rng.NextDouble() * 9f;
+                Material m = edificios[rng.Next(edificios.Length)];
+                Cube($"Edificio_{jx:F0}_{jz:F0}", new Vector3(jx, h * 0.5f, jz), new Vector3(w, h, d), m, S);
+            }
+        }
+
+        // Árboles cerca de las banquetas
+        for (float tx = RoadXMin + 6f; tx <= RoadXMax - 6f; tx += 9f)
+        {
+            foreach (float tz in new[] { -12f, 12f })
+            {
+                if (OverlapsRoad(tx, tz, 1.5f)) continue;
+                if (rng.NextDouble() < 0.35) continue;
+                BuildTree(new Vector3(tx, 0f, tz), tronco, hojas, S);
+            }
+        }
+    }
+
+    private static void BuildTree(Vector3 pos, Material tronco, Material hojas, Transform parent)
+    {
+        GameObject t = new GameObject("Arbol");
+        t.transform.SetParent(parent, false);
+        t.transform.localPosition = pos;
+
+        Cube("Tronco", new Vector3(0f, 1f, 0f), new Vector3(0.4f, 2f, 0.4f), tronco, t.transform);
+
+        GameObject leaves = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        leaves.name = "Copa";
+        leaves.transform.SetParent(t.transform, false);
+        leaves.transform.localPosition = new Vector3(0f, 2.6f, 0f);
+        leaves.transform.localScale = Vector3.one * 2.4f;
+        var col = leaves.GetComponent<SphereCollider>();
+        if (col != null) col.enabled = false;
+        leaves.GetComponent<Renderer>().sharedMaterial = hojas;
     }
 
     private static void BuildSidewalk(string name, float z, List<Vector2> gaps, Transform parent, Material mat)
@@ -425,7 +505,7 @@ public static class CorridorBuilder
 
     private static GameObject[] LoadPrefabs()
     {
-        string[] names = { "Sedan", "Suv", "CarroJeep", "CarroPickup" };
+        string[] names = { "Sedan", "Suv" };
         var list = new List<GameObject>();
         foreach (string n in names)
         {

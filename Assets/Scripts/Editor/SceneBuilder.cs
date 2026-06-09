@@ -114,7 +114,7 @@ public static class SceneBuilder
 
         // G) Prefabs
         List<GameObject> prefabs = new List<GameObject>();
-        string[] modelNames = { "Sedan", "Suv", "CarroJeep", "CarroPickup" };
+        string[] modelNames = { "Sedan", "Suv" };
         foreach (string name in modelNames)
         {
             GameObject p = BuildCarPrefab(name);
