@@ -28,9 +28,12 @@ public static class CorridorBuilder
     private const float GreenDur = 10f;         // Elizondo
     private const float YellowDur = 2f;
     private const float RedDur = 8f;
-    private const float CrossGreen = 6f;        // transversal (contrafase, ciclo 20)
+    // Transversal (contrafase, ciclo 20). Verde más corto + todo-rojo en las
+    // transiciones para que la intersección se vacíe (evita choques en la vuelta).
+    private const float CrossGreen = 4f;
     private const float CrossYellow = 2f;
-    private const float CrossRed = 12f;
+    private const float CrossRed = 14f;
+    private const float AllRed = 1f;            // colchón de todo-rojo
 
     private const float RoadXMin = -120f;       // tramo más largo
     private const float RoadXMax = 130f;
@@ -229,7 +232,7 @@ public static class CorridorBuilder
             BuildStopLine(c.name + "_Eliz", new Vector3(elizLightX, 0f, 0f), new Vector3(3f, 3f, RoadWidth), tlEliz, G);
 
             // Semáforo transversal (contrafase). En S1 el tráfico sube (+Z): alto del lado sur.
-            float crossOffset = Mathf.Repeat(offset + GreenDur + YellowDur, cycle);
+            float crossOffset = Mathf.Repeat(offset + GreenDur + YellowDur + AllRed, cycle);
             int crossSide = isS1 ? -1 : c.side;            // lado por el que llegan los carros transversales
             float crossStopZ = crossSide * (HalfInter + 4f);
             TrafficLight tlCross = BuildLight(c.name + "_Cross",
@@ -280,7 +283,7 @@ public static class CorridorBuilder
                     baja.Add(Wp($"Junco_Baja_Post_{cc.name}", new Vector3(PostX(cc.x), 0f, zNorte), crossWpRoot));
                 }
                 baja.Add(Wp("Junco_Baja_Salida", new Vector3(exitX, 0f, zNorte), crossWpRoot));
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 5f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 7f });
 
                 // Carril que sube (se aleja por Junco)
                 var sube = new List<Transform>
