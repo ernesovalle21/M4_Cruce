@@ -7,11 +7,12 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Construye (de cero, limpiando duplicados) el corredor Av. Luis Elizondo:
 ///   - Avenida recta de UN sentido y 3 carriles a lo largo del eje X.
-///   - 3 cruces con semáforo (tipo poste con 3 focos) coordinados por onda verde.
-///   - Tráfico transversal con semáforos en CONTRAFASE (verde solo durante el
-///     rojo de Elizondo).
-///   - Banquetas segmentadas, cebras, líneas de alto y flechas de sentido.
-///   - Un solo CarSpawner con una entrada por carril (Elizondo + transversales).
+///     Dir = -1 -> los carros van de DERECHA a IZQUIERDA (-X).
+///   - 3 cruces con semáforo (poste con 3 focos) coordinados por onda verde.
+///   - Tráfico transversal con semáforos en CONTRAFASE.
+///   - Junco (centro) es una T de doble sentido: el carril que baja da vuelta
+///     e se incorpora a Elizondo.
+///   - Banquetas, cebras, flechas, escenografía (edificios + árboles).
 ///
 /// Menú: M4Cruce > Construir Corredor (Limpio)
 /// </summary>
@@ -22,29 +23,28 @@ public static class CorridorBuilder
     private const string RootName = "Corredor_Elizondo";
 
     // ---- Parámetros del corredor ----
-    private const float CarSpeed = 5f;          // unidades/seg
+    private const int Dir = -1;                 // sentido de Elizondo: -1 = derecha->izquierda
+    private const float CarSpeed = 5f;
     private const float GreenDur = 10f;         // Elizondo
     private const float YellowDur = 2f;
     private const float RedDur = 8f;
-
-    // Transversal (contrafase). Ciclo total = 20s, igual que Elizondo.
-    private const float CrossGreen = 6f;
+    private const float CrossGreen = 6f;        // transversal (contrafase, ciclo 20)
     private const float CrossYellow = 2f;
     private const float CrossRed = 12f;
 
-    private const float RoadXMin = -75f;        // entrada de los carros
-    private const float RoadXMax = 85f;         // salida de los carros
-    private const float RoadWidth = 14f;        // ancho total (3 carriles)
-    private static readonly float[] LaneZ = { -4.5f, 0f, 4.5f }; // carriles Elizondo
-    private static readonly float[] CrossLaneX = { -3f, 3f };     // carriles transversales
-    private const float HalfInter = 7f;         // media anchura de cada intersección
-    private const float Bz = RoadWidth * 0.5f + 2f; // centro de banqueta de Elizondo
+    private const float RoadXMin = -120f;       // tramo más largo
+    private const float RoadXMax = 130f;
+    private const float RoadWidth = 14f;
+    private static readonly float[] LaneZ = { -4.5f, 0f, 4.5f };
+    private static readonly float[] CrossLaneX = { -3f, 3f };
+    private const float HalfInter = 7f;
+    private const float Bz = RoadWidth * 0.5f + 2f;
 
     private struct Cross
     {
         public string name;
         public float x;
-        public int side; // +1 = brazo largo al norte, -1 = al sur
+        public int side; // +1 = brazo al norte, -1 = al sur
         public Cross(string n, float x, int s) { name = n; this.x = x; side = s; }
     }
 
@@ -55,8 +55,12 @@ public static class CorridorBuilder
         new Cross("S3_GarzaSada",   50.0f, -1),
     };
 
-    // Junco es la única calle modelada como T real de doble sentido (con vuelta).
     private const string JuncoName = "S2_JuncoT";
+
+    // Lado por el que los carros se aproximan a un cruce (aguas arriba)
+    private static float AnteX(float x) => x - Dir * (HalfInter + 7f);
+    private static float PostX(float x) => x + Dir * (HalfInter + 3f);
+    private static float StopX(float x) => x - Dir * (HalfInter + 4f);
 
     [MenuItem("M4Cruce/Construir Corredor (Limpio)")]
     public static void Build()
@@ -91,10 +95,10 @@ public static class CorridorBuilder
         float roadCenterX = (RoadXMin + RoadXMax) * 0.5f;
         float roadLen = RoadXMax - RoadXMin;
 
-        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 80f, 0.1f, 220f), matPasto, R);
+        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 140f, 0.1f, 300f), matPasto, R);
         Cube("Elizondo_Road", new Vector3(roadCenterX, -0.05f, 0f), new Vector3(roadLen, 0.1f, RoadWidth), matAsfalto, R);
 
-        // Banquetas segmentadas (huecos donde cruza una transversal, ambos lados pasantes)
+        // Banquetas segmentadas
         var northGaps = new List<Vector2>();
         var southGaps = new List<Vector2>();
         foreach (var c in Crosses)
@@ -111,19 +115,29 @@ public static class CorridorBuilder
         Cube("Linea_Orilla_N", new Vector3(roadCenterX, -0.045f,  6.8f),  new Vector3(roadLen, 0.01f, 0.3f),  matLinea, R);
         Cube("Linea_Orilla_S", new Vector3(roadCenterX, -0.045f, -6.8f),  new Vector3(roadLen, 0.01f, 0.3f),  matLinea, R);
 
-        float[] arrowXs = { -58f, -17f, 25f, 70f };
-        foreach (float z in LaneZ)
-            foreach (float ax in arrowXs)
-                BuildArrow(ax, z, 0f, R, matLinea);
+        // Flechas de sentido (apuntan según Dir)
+        float arrowYaw = Dir < 0 ? 180f : 0f;
+        for (float ax = RoadXMin + 18f; ax <= RoadXMax - 18f; ax += 24f)
+        {
+            bool nearCross = false;
+            foreach (var c in Crosses) if (Mathf.Abs(ax - c.x) < 12f) nearCross = true;
+            if (nearCross) continue;
+            foreach (float z in LaneZ) BuildArrow(ax, z, arrowYaw, R, matLinea);
+        }
 
-        float firstX = Crosses[0].x;
+        // Orden de cruces según el sentido de avance; el primero define la onda verde
+        var ordered = new List<Cross>(Crosses);
+        ordered.Sort((a, b) => Dir < 0 ? b.x.CompareTo(a.x) : a.x.CompareTo(b.x));
+        float firstX = ordered[0].x;
         float cycle = GreenDur + YellowDur + RedDur;
+        float entryX = Dir < 0 ? RoadXMax : RoadXMin;
+        float exitX  = Dir < 0 ? RoadXMin : RoadXMax;
 
         var entries = new List<CarSpawner.SpawnPoint>();
-
-        // ---- Entradas de Elizondo (3 carriles) ----
         Transform wpRoot = new GameObject("Waypoints").transform;
         wpRoot.SetParent(R, false);
+
+        // ---- Entradas de Elizondo (3 carriles) ----
         for (int lane = 0; lane < LaneZ.Length; lane++)
         {
             float z = LaneZ[lane];
@@ -131,13 +145,13 @@ public static class CorridorBuilder
             laneRoot.SetParent(wpRoot, false);
 
             var path = new List<Transform>();
-            path.Add(Wp($"E{lane}_Entrada", new Vector3(RoadXMin, 0f, z), laneRoot));
-            foreach (var c in Crosses)
+            path.Add(Wp($"E{lane}_Entrada", new Vector3(entryX, 0f, z), laneRoot));
+            foreach (var c in ordered)
             {
-                path.Add(Wp($"E{lane}_Ante_{c.name}", new Vector3(c.x - (HalfInter + 7f), 0f, z), laneRoot));
-                path.Add(Wp($"E{lane}_Post_{c.name}", new Vector3(c.x + (HalfInter + 3f), 0f, z), laneRoot));
+                path.Add(Wp($"E{lane}_Ante_{c.name}", new Vector3(AnteX(c.x), 0f, z), laneRoot));
+                path.Add(Wp($"E{lane}_Post_{c.name}", new Vector3(PostX(c.x), 0f, z), laneRoot));
             }
-            path.Add(Wp($"E{lane}_Salida", new Vector3(RoadXMax, 0f, z), laneRoot));
+            path.Add(Wp($"E{lane}_Salida", new Vector3(exitX, 0f, z), laneRoot));
 
             entries.Add(new CarSpawner.SpawnPoint
             {
@@ -147,7 +161,7 @@ public static class CorridorBuilder
             });
         }
 
-        // ---- Cada cruce: calle transversal + 2 semáforos + tráfico transversal ----
+        // ---- Cada cruce ----
         foreach (var c in Crosses)
         {
             GameObject g = new GameObject("Cruce_" + c.name);
@@ -156,14 +170,12 @@ public static class CorridorBuilder
 
             bool isT = c.name == JuncoName;
 
-            // Brazo largo (lado c.side)
             Cube(c.name + "_Road_Largo", new Vector3(c.x, -0.05f, c.side * 47f), new Vector3(14f, 0.1f, 80f), matAsfalto, G);
             Cube(c.name + "_Inter", new Vector3(c.x, -0.04f, 0f), new Vector3(14f, 0.1f, 14f), matInter, G);
             Cube(c.name + "_LineaC_L", new Vector3(c.x, -0.035f, c.side * 47f), new Vector3(0.25f, 0.01f, 70f), matLinea, G);
             Cube(c.name + "_BanqL_W", new Vector3(c.x - 9f, 0f, c.side * 47f), new Vector3(4f, 0.2f, 80f), matBanqueta, G);
             Cube(c.name + "_BanqL_E", new Vector3(c.x + 9f, 0f, c.side * 47f), new Vector3(4f, 0.2f, 80f), matBanqueta, G);
 
-            // Stub del lado opuesto: solo en cruces pasantes (Junco es T, no lo lleva)
             if (!isT)
             {
                 Cube(c.name + "_Road_Stub", new Vector3(c.x, -0.05f, -c.side * 20f), new Vector3(14f, 0.1f, 28f), matAsfalto, G);
@@ -172,20 +184,20 @@ public static class CorridorBuilder
                 Cube(c.name + "_BanqS_E",   new Vector3(c.x + 9f, 0f, -c.side * 20f), new Vector3(4f, 0.2f, 28f), matBanqueta, G);
             }
 
-            float offset = Mathf.Repeat((c.x - firstX) / CarSpeed, cycle);
+            float offset = Mathf.Abs(c.x - firstX) / CarSpeed;
 
-            // --- Semáforo de Elizondo ---
-            float elizLightX = c.x - (HalfInter + 4f);
+            // Semáforo de Elizondo (en el lado por el que se aproximan los carros)
+            float elizLightX = StopX(c.x);
             TrafficLight tlEliz = BuildLight(c.name + "_Eliz",
                 new Vector3(elizLightX, 0f, c.side * 8.5f), offset, c.side,
                 GreenDur, YellowDur, RedDur, new Vector3(0f, 0f, -c.side * 0.35f),
                 matSemCaja, matVerde, matAmarillo, matRojo, matFocoOff, G);
 
-            BuildCrosswalk(c.name + "_Eliz", new Vector3(c.x - (HalfInter + 2f), -0.03f, 0f), true, matLinea, G);
+            BuildCrosswalk(c.name + "_Eliz", new Vector3(c.x - Dir * (HalfInter + 2f), -0.03f, 0f), true, matLinea, G);
             Cube(c.name + "_AltoEliz", new Vector3(elizLightX, -0.03f, 0f), new Vector3(0.9f, 0.01f, RoadWidth), matLinea, G);
             BuildStopLine(c.name + "_Eliz", new Vector3(elizLightX, 0f, 0f), new Vector3(3f, 3f, RoadWidth), tlEliz, G);
 
-            // --- Semáforo transversal (contrafase: verde durante el rojo de Elizondo) ---
+            // Semáforo transversal (contrafase)
             float crossOffset = Mathf.Repeat(offset + GreenDur + YellowDur, cycle);
             float crossStopZ = c.side * (HalfInter + 4f);
             TrafficLight tlCross = BuildLight(c.name + "_Cross",
@@ -203,25 +215,29 @@ public static class CorridorBuilder
 
             if (isT)
             {
-                // Junco: T de doble sentido (carriles opuestos).
-                // Carril que BAJA (-Z): se detiene en el semáforo y da vuelta para
-                // incorporarse al carril norte de Elizondo (+X).
+                // Junco: T de doble sentido. El carril que baja se detiene y da vuelta
+                // para incorporarse al carril norte de Elizondo (en el sentido Dir).
                 const float zNorte = 4.5f;
+                float mergeX = PostX(c.x) + Dir * 4f; // ya dentro del carril, aguas abajo del cruce
                 var baja = new List<Transform>
                 {
-                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 60f),   crossWpRoot),
-                    Wp("Junco_Baja_1", new Vector3(-2.3f, 0f, 11f),   crossWpRoot), // alto (semáforo transversal)
-                    Wp("Junco_Baja_2", new Vector3(-2.3f, 0f, 6f),    crossWpRoot),
-                    Wp("Junco_Baja_3", new Vector3(-0.5f, 0f, 5.0f),  crossWpRoot), // arco de vuelta
-                    Wp("Junco_Baja_4", new Vector3( 2.0f, 0f, zNorte), crossWpRoot), // ya incorporado
-                    Wp("Junco_Baja_5", new Vector3(36f,  0f, zNorte),  crossWpRoot), // ante S3
-                    Wp("Junco_Baja_6", new Vector3(60f,  0f, zNorte),  crossWpRoot), // post S3
-                    Wp("Junco_Baja_7", new Vector3(85f,  0f, zNorte),  crossWpRoot), // salida
+                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 60f),  crossWpRoot),
+                    Wp("Junco_Baja_1", new Vector3(-2.3f, 0f, 11f),  crossWpRoot), // alto (semáforo transversal)
+                    Wp("Junco_Baja_2", new Vector3(-2.3f, 0f, 6f),   crossWpRoot),
+                    Wp("Junco_Baja_3", new Vector3(Dir * 1.5f, 0f, 5.0f), crossWpRoot), // arco de vuelta
+                    Wp("Junco_Baja_4", new Vector3(mergeX, 0f, zNorte), crossWpRoot),   // incorporado
                 };
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 4f });
+                // Desde el merge, sigue por el carril norte hasta la salida pasando los cruces aguas abajo
+                foreach (var cc in ordered)
+                {
+                    if (Dir < 0 ? cc.x >= c.x : cc.x <= c.x) continue; // solo cruces aguas abajo
+                    baja.Add(Wp($"Junco_Baja_Ante_{cc.name}", new Vector3(AnteX(cc.x), 0f, zNorte), crossWpRoot));
+                    baja.Add(Wp($"Junco_Baja_Post_{cc.name}", new Vector3(PostX(cc.x), 0f, zNorte), crossWpRoot));
+                }
+                baja.Add(Wp("Junco_Baja_Salida", new Vector3(exitX, 0f, zNorte), crossWpRoot));
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 5f });
 
-                // Carril que SUBE (+Z): nace cerca del cruce (como si saliera de Elizondo)
-                // y se aleja por Junco.
+                // Carril que sube (se aleja por Junco)
                 var sube = new List<Transform>
                 {
                     Wp("Junco_Sube_0", new Vector3(2.3f, 0f, 12f), crossWpRoot),
@@ -231,7 +247,6 @@ public static class CorridorBuilder
             }
             else
             {
-                // Cruces pasantes: 2 carriles del mismo sentido cruzan recto.
                 for (int cl = 0; cl < CrossLaneX.Length; cl++)
                 {
                     float lx = c.x + CrossLaneX[cl];
@@ -247,7 +262,7 @@ public static class CorridorBuilder
             }
         }
 
-        // ---- Escenografía (edificios + árboles) ----
+        // ---- Escenografía ----
         BuildScenery(R, matEdificios, matTronco, matHojas);
 
         // ---- Spawner ----
@@ -256,7 +271,7 @@ public static class CorridorBuilder
         CarSpawner spawner = spawnerGO.AddComponent<CarSpawner>();
         spawner.carPrefabs = LoadPrefabs();
         spawner.entries = entries.ToArray();
-        spawner.maxCars = 30;
+        spawner.maxCars = 36;
         spawner.carSpeed = CarSpeed;
 
         // ---- Cámara ----
@@ -267,18 +282,16 @@ public static class CorridorBuilder
             camGO.tag = "MainCamera";
             cam = camGO.AddComponent<Camera>();
         }
-        cam.transform.position = new Vector3(5f, 135f, -58f);
-        cam.transform.rotation = Quaternion.Euler(62f, 0f, 0f);
+        cam.transform.position = new Vector3(roadCenterX, 175f, -90f);
+        cam.transform.rotation = Quaternion.Euler(60f, 0f, 0f);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         AssetDatabase.SaveAssets();
 
         EditorUtility.DisplayDialog("M4 Cruce — Corredor construido",
-            "Av. Luis Elizondo (3 carriles, 1 sentido) + tráfico transversal con\n" +
-            "semáforos en contrafase.\n\n" +
-            $"Elizondo: {GreenDur}/{YellowDur}/{RedDur}s · Transversal: {CrossGreen}/{CrossYellow}/{CrossRed}s\n" +
-            $"Ciclo total: {cycle}s · Velocidad: {CarSpeed} u/s\n\n" +
-            "Dale Play.", "OK");
+            $"Av. Luis Elizondo ({(Dir < 0 ? "derecha->izquierda" : "izquierda->derecha")}), 3 carriles, tramo largo.\n" +
+            "Tráfico transversal en contrafase · Junco = T de doble sentido.\n\n" +
+            $"Ciclo: {cycle}s · Velocidad: {CarSpeed} u/s\n\nDale Play.", "OK");
     }
 
     // =====================================================================
@@ -324,12 +337,9 @@ public static class CorridorBuilder
         return go.transform;
     }
 
-    /// <summary>True si (x,z) cae sobre alguna calle (Elizondo o transversal) o su banqueta.</summary>
     private static bool OverlapsRoad(float x, float z, float margin)
     {
-        // Elizondo (banqueta incluida): |z| <= Bz+2
         if (Mathf.Abs(z) <= Bz + 2f + margin) return true;
-        // Transversales: cerca de x del cruce
         foreach (var c in Crosses)
             if (Mathf.Abs(x - c.x) <= 9f + margin) return true;
         return false;
@@ -341,9 +351,8 @@ public static class CorridorBuilder
         sceneRoot.transform.SetParent(parent, false);
         Transform S = sceneRoot.transform;
 
-        var rng = new System.Random(12345); // semilla fija: rebuild estable
+        var rng = new System.Random(12345);
 
-        // Edificios en cuadras lejanas a las calles
         float[] zRows = { -20f, -34f, -48f, 20f, 34f, 48f };
         for (float bx = RoadXMin + 4f; bx <= RoadXMax - 4f; bx += 13f)
         {
@@ -352,7 +361,7 @@ public static class CorridorBuilder
                 float jx = bx + (float)(rng.NextDouble() * 4 - 2);
                 float jz = bz + (float)(rng.NextDouble() * 4 - 2);
                 if (OverlapsRoad(jx, jz, 4f)) continue;
-                if (rng.NextDouble() < 0.25) continue; // dejar huecos
+                if (rng.NextDouble() < 0.25) continue;
 
                 float w = 5f + (float)rng.NextDouble() * 4f;
                 float d = 5f + (float)rng.NextDouble() * 4f;
@@ -362,7 +371,6 @@ public static class CorridorBuilder
             }
         }
 
-        // Árboles cerca de las banquetas
         for (float tx = RoadXMin + 6f; tx <= RoadXMax - 6f; tx += 9f)
         {
             foreach (float tz in new[] { -12f, 12f })
@@ -417,7 +425,6 @@ public static class CorridorBuilder
         Cube(name, new Vector3(cx, 0f, z), new Vector3(len, 0.2f, 4f), mat, parent);
     }
 
-    /// <summary>Flecha blanca de sentido. yaw=0 apunta a +X; yaw=otro la rota.</summary>
     private static void BuildArrow(float x, float z, float yaw, Transform parent, Material mat)
     {
         GameObject g = new GameObject($"Flecha_{x:F0}_{z:F0}");
@@ -432,8 +439,6 @@ public static class CorridorBuilder
         hL.transform.localRotation = Quaternion.Euler(0f, -50f, 0f);
     }
 
-    /// <summary>Cebra. horizontal=true cruza la avenida (franjas a lo largo de Z);
-    /// horizontal=false cruza la transversal (franjas a lo largo de X).</summary>
     private static void BuildCrosswalk(string name, Vector3 center, bool horizontal, Material matLinea, Transform parent)
     {
         GameObject group = new GameObject(name + "_CrucePeatonal");
