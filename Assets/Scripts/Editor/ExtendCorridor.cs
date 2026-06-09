@@ -22,6 +22,11 @@ public static class ExtendCorridor
     private const float OffsetS2 = 31.1f;
     private const float OffsetS3 = 10.1f;
 
+    // Duraciones del ciclo (segundos) — total 66s, alineado con los offsets
+    private const float GreenDuration  = 45f;
+    private const float YellowDuration = 3f;
+    private const float RedDuration    = 18f;
+
     [MenuItem("M4Cruce/Extend To Corridor")]
     public static void Extend()
     {
@@ -59,10 +64,10 @@ public static class ExtendCorridor
         // 3. Asegurar que la calle Elizondo cubre el corredor completo
         // (40 izq + 55 der desde S2). La calle existente ya cubre ±100 en x,
         // pero para garantizarlo agregamos parches en los extremos por si fue acortada.
-        EnsureElizondoCoverage(cruceRoot, matAsfalto, matLinea, matBanqueta);
+        EnsureElizondoCoverage(cruceRoot, matAsfalto);
 
         // 4. Crear el cruce S1 (Covarrubias) — calle transversal hacia el norte
-        GameObject s1Cross = BuildCrossStreet(
+        BuildCrossStreet(
             crossName: "Cruce_Covarrubias",
             centerX: xS1,
             cruceRoot: cruceRoot,
@@ -87,7 +92,7 @@ public static class ExtendCorridor
         BuildCrosswalkOnElizondo(xS1, cruceRoot, matLinea);
 
         // 5. Crear el cruce S3 (Garza Sada)
-        GameObject s3Cross = BuildCrossStreet(
+        BuildCrossStreet(
             crossName: "Cruce_GarzaSada",
             centerX: xS3,
             cruceRoot: cruceRoot,
@@ -111,11 +116,18 @@ public static class ExtendCorridor
 
         BuildCrosswalkOnElizondo(xS3, cruceRoot, matLinea);
 
-        // 6. Actualizar S2 (Elizondo) con su offset de onda verde
+        // 6. Actualizar S2 (Elizondo) con su offset de onda verde y duraciones del ciclo
         TrafficLight s2ElizondoLight = s2ElizondoObj.GetComponent<TrafficLight>();
         if (s2ElizondoLight != null)
         {
             s2ElizondoLight.startOffset = OffsetS2;
+            ApplyCycleDurations(s2ElizondoLight);
+        }
+        // También al semáforo de Junco para que el partner-link no descoordine el ciclo
+        TrafficLight s2JuncoLight = s2JuncoObj.GetComponent<TrafficLight>();
+        if (s2JuncoLight != null)
+        {
+            ApplyCycleDurations(s2JuncoLight);
         }
 
         // 7. Crear los 8 waypoints de la ruta completa en Elizondo
@@ -215,7 +227,7 @@ public static class ExtendCorridor
         return go.transform;
     }
 
-    private static void EnsureElizondoCoverage(Transform parent, Material matAsfalto, Material matLinea, Material matBanqueta)
+    private static void EnsureElizondoCoverage(Transform parent, Material matAsfalto)
     {
         // Parche extra por seguridad: si la calle ya cubre estos rangos, simplemente
         // se solapa (no rompe nada porque comparten y de asfalto).
@@ -230,6 +242,13 @@ public static class ExtendCorridor
         {
             CreateCube("Elizondo_Road_Ext", new Vector3(centerX, -0.055f, 0f), new Vector3(length, 0.1f, 14f), matAsfalto, parent);
         }
+    }
+
+    private static void ApplyCycleDurations(TrafficLight tl)
+    {
+        tl.greenDuration  = GreenDuration;
+        tl.yellowDuration = YellowDuration;
+        tl.redDuration    = RedDuration;
     }
 
     private static GameObject BuildCrossStreet(string crossName, float centerX, Transform cruceRoot,
@@ -310,6 +329,7 @@ public static class ExtendCorridor
         tl.matGreen = matVerde;
         tl.matYellow = matAmarillo;
         tl.matRed = matRojo;
+        ApplyCycleDurations(tl);
         return tl;
     }
 
