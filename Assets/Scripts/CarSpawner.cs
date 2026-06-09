@@ -13,14 +13,34 @@ public class CarSpawner : MonoBehaviour
     }
 
     public GameObject[] carPrefabs;
+
+    [Header("Entradas (genérico, una por carril)")]
+    public SpawnPoint[] entries;
+
+    [Header("Entradas legadas (se usan solo si 'entries' está vacío)")]
     public SpawnPoint juncoEntry;
     public SpawnPoint elizondoEntry;
+
+    [Header("Config")]
     public int maxCars = 8;
+    [Tooltip("Velocidad que se asigna a cada carro al instanciarlo (0 = usar la del prefab).")]
+    public float carSpeed = 0f;
 
     private int _activeCars = 0;
 
     void Update()
     {
+        if (entries != null && entries.Length > 0)
+        {
+            foreach (var e in entries)
+            {
+                if (_activeCars >= maxCars) return;
+                TrySpawn(e);
+            }
+            return;
+        }
+
+        // Comportamiento legado (cruce base de 2 entradas)
         if (_activeCars >= maxCars) return;
         TrySpawn(juncoEntry);
         if (_activeCars >= maxCars) return;
@@ -46,6 +66,7 @@ public class CarSpawner : MonoBehaviour
         var mover = car.GetComponent<WaypointMover>();
         if (mover == null) mover = car.AddComponent<WaypointMover>();
         mover.waypoints = sp.waypoints;
+        if (carSpeed > 0f) mover.speed = carSpeed;
 
         var notifier = car.AddComponent<CarDestroyNotifier>();
         notifier.spawner = this;

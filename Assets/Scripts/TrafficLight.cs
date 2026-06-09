@@ -1,157 +1,94 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Semáforo determinista: la fase se calcula directamente desde el reloj global
+/// (Time.time) más un desfase (startOffset). Esto garantiza que varios semáforos
+/// queden coordinados en "onda verde" sin estados internos que se desincronicen.
+/// </summary>
 public class TrafficLight : MonoBehaviour
 {
     public enum Phase { Green, Yellow, Red }
 
-    public float greenDuration = 8f;
+    [Header("Duraciones del ciclo (s)")]
+    public float greenDuration = 10f;
     public float yellowDuration = 2f;
     public float redDuration = 8f;
-    public Phase startPhase = Phase.Green;
 
     [Header("Coordinación onda verde")]
-    [Tooltip("S1=0  |  S2=31.1  |  S3=10.1")]
+    [Tooltip("Desfase en segundos respecto al inicio del ciclo global.")]
     public float startOffset = 0f;
 
+    [Header("Visual")]
     public Renderer lampRenderer;
     public Material matGreen;
     public Material matYellow;
     public Material matRed;
 
-    public TrafficLight partnerLight;
+    [Header("Compatibilidad (no usados por el modelo determinista)")]
+    public Phase startPhase = Phase.Green;   // conservado por compatibilidad con builders previos
+    public TrafficLight partnerLight;        // conservado por compatibilidad con builders previos
 
-    private Phase currentPhase;
-    private float timer;
-    private bool _started = false;
-    private List<WaypointMover> stoppedCars = new List<WaypointMover>();
+    private Phase currentPhase = Phase.Red;
+    private bool initialized = false;
+    private readonly List<WaypointMover> carsAtLine = new List<WaypointMover>();
 
     public Phase CurrentPhase => currentPhase;
-
-    void Start()
-    {
-        // Antes de que arranque el ciclo (mientras effectiveTime < 0)
-        // el semáforo se mantiene en rojo.
-        currentPhase = Phase.Red;
-        timer = 0f;
-        ApplyMaterial();
-    }
+    public float CycleTime => greenDuration + yellowDuration + redDuration;
 
     void Update()
     {
-        float effectiveTime = Time.time - startOffset;
-        if (effectiveTime < 0f)
+        Phase p = ComputePhase(Time.time);
+        if (!initialized || p != currentPhase)
         {
-            if (currentPhase != Phase.Red)
-            {
-                ForcePhase(Phase.Red);
-            }
-            return;
-        }
-
-        if (!_started)
-        {
-            _started = true;
-            currentPhase = startPhase;
-            timer = GetDuration(startPhase);
+            initialized = true;
+            currentPhase = p;
             ApplyMaterial();
-            if (startPhase == Phase.Green)
-            {
-                ReleaseAllCars();
-            }
-        }
-
-        timer -= Time.deltaTime;
-        if (timer <= 0f)
-        {
-            AdvancePhase();
+            UpdateCars();
         }
     }
 
-    private void AdvancePhase()
+    private Phase ComputePhase(float time)
     {
-        Phase next = currentPhase;
-        switch (currentPhase)
-        {
-            case Phase.Green:
-                next = Phase.Yellow;
-                break;
-            case Phase.Yellow:
-                next = Phase.Red;
-                partnerLight?.ForcePhase(Phase.Green);
-                break;
-            case Phase.Red:
-                next = Phase.Green;
-                ReleaseAllCars();
-                partnerLight?.ForcePhase(Phase.Red);
-                break;
-        }
-        currentPhase = next;
-        timer = GetDuration(currentPhase);
-        ApplyMaterial();
+        float cycle = CycleTime;
+        if (cycle <= 0f) return Phase.Green;
+        float t = Mathf.Repeat(time - startOffset, cycle);
+        if (t < greenDuration) return Phase.Green;
+        if (t < greenDuration + yellowDuration) return Phase.Yellow;
+        return Phase.Red;
     }
 
-    private void ReleaseAllCars()
+    /// <summary>Aplica el estado actual a los carros detenidos en la línea de alto.</summary>
+    private void UpdateCars()
     {
-        foreach (var car in stoppedCars)
+        bool stop = (currentPhase == Phase.Red);
+        for (int i = carsAtLine.Count - 1; i >= 0; i--)
         {
-            if (car != null) car.SetStopped(false);
+            if (carsAtLine[i] == null) { carsAtLine.RemoveAt(i); continue; }
+            carsAtLine[i].SetStopped(stop);
         }
-    }
-
-    public void ForcePhase(Phase p)
-    {
-        currentPhase = p;
-        timer = GetDuration(p);
-        if (p == Phase.Green)
-        {
-            ReleaseAllCars();
-        }
-        else
-        {
-            foreach (var car in stoppedCars)
-            {
-                if (car != null) car.SetStopped(true);
-            }
-        }
-        ApplyMaterial();
     }
 
     public void RegisterCar(WaypointMover car)
     {
         if (car == null) return;
-        if (!stoppedCars.Contains(car)) stoppedCars.Add(car);
-        car.SetStopped(currentPhase != Phase.Green);
+        if (!carsAtLine.Contains(car)) carsAtLine.Add(car);
+        car.SetStopped(currentPhase == Phase.Red);
     }
 
     public void UnregisterCar(WaypointMover car)
     {
         if (car == null) return;
-        stoppedCars.Remove(car);
+        carsAtLine.Remove(car);
         car.SetStopped(false);
-    }
-
-    private float GetDuration(Phase p)
-    {
-        switch (p)
-        {
-            case Phase.Green: return greenDuration;
-            case Phase.Yellow: return yellowDuration;
-            case Phase.Red: return redDuration;
-        }
-        return 1f;
     }
 
     private void ApplyMaterial()
     {
         if (lampRenderer == null) return;
-        Material m = null;
-        switch (currentPhase)
-        {
-            case Phase.Green: m = matGreen; break;
-            case Phase.Yellow: m = matYellow; break;
-            case Phase.Red: m = matRed; break;
-        }
+        Material m = currentPhase == Phase.Green ? matGreen
+                   : currentPhase == Phase.Yellow ? matYellow
+                   : matRed;
         if (m != null) lampRenderer.material = m;
     }
 }
