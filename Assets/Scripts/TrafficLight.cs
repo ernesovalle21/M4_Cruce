@@ -10,6 +10,10 @@ public class TrafficLight : MonoBehaviour
     public float redDuration = 8f;
     public Phase startPhase = Phase.Green;
 
+    [Header("Coordinación onda verde")]
+    [Tooltip("S1=0  |  S2=31.1  |  S3=10.1")]
+    public float startOffset = 0f;
+
     public Renderer lampRenderer;
     public Material matGreen;
     public Material matYellow;
@@ -19,19 +23,44 @@ public class TrafficLight : MonoBehaviour
 
     private Phase currentPhase;
     private float timer;
+    private bool _started = false;
     private List<WaypointMover> stoppedCars = new List<WaypointMover>();
 
     public Phase CurrentPhase => currentPhase;
 
     void Start()
     {
-        currentPhase = startPhase;
-        timer = GetDuration(currentPhase);
+        // Antes de que arranque el ciclo (mientras effectiveTime < 0)
+        // el semáforo se mantiene en rojo.
+        currentPhase = Phase.Red;
+        timer = 0f;
         ApplyMaterial();
     }
 
     void Update()
     {
+        float effectiveTime = Time.time - startOffset;
+        if (effectiveTime < 0f)
+        {
+            if (currentPhase != Phase.Red)
+            {
+                ForcePhase(Phase.Red);
+            }
+            return;
+        }
+
+        if (!_started)
+        {
+            _started = true;
+            currentPhase = startPhase;
+            timer = GetDuration(startPhase);
+            ApplyMaterial();
+            if (startPhase == Phase.Green)
+            {
+                ReleaseAllCars();
+            }
+        }
+
         timer -= Time.deltaTime;
         if (timer <= 0f)
         {
