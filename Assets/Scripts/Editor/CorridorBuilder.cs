@@ -35,18 +35,18 @@ public static class CorridorBuilder
     private const float CrossRed = 14f;
     private const float AllRed = 1f;            // colchón de todo-rojo
 
-    private const float RoadXMin = -120f;       // tramo más largo
-    private const float RoadXMax = 130f;
+    private const float RoadXMin = -150f;       // tramo aún más largo
+    private const float RoadXMax = 160f;
     private const float RoadWidth = 14f;
     private static readonly float[] LaneZ = { -4.5f, 0f, 4.5f };
     private const float HalfInter = 7f;
     private const float Bz = RoadWidth * 0.5f + 2f;
 
     // Longitud de los brazos de las calles transversales (calles más largas)
-    private const float ArmLong = 110f;   // brazo largo
-    private const float ArmStub = 50f;    // brazo corto (pasante)
-    private const float S1ArmN = 90f;     // S1: brazo norte
-    private const float S1ArmS = 130f;    // S1: brazo sur (más largo)
+    private const float ArmLong = 150f;   // brazo largo
+    private const float ArmStub = 80f;    // brazo corto (pasante)
+    private const float S1ArmN = 130f;    // S1: brazo norte
+    private const float S1ArmS = 185f;    // S1: brazo sur (más largo)
 
     private struct Cross
     {
@@ -107,7 +107,7 @@ public static class CorridorBuilder
         float roadCenterX = (RoadXMin + RoadXMax) * 0.5f;
         float roadLen = RoadXMax - RoadXMin;
 
-        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 140f, 0.1f, 300f), matPasto, R);
+        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 160f, 0.1f, 430f), matPasto, R);
         Cube("Elizondo_Road", new Vector3(roadCenterX, -0.05f, 0f), new Vector3(roadLen, 0.1f, RoadWidth), matAsfalto, R);
 
         // Banquetas segmentadas
@@ -289,7 +289,7 @@ public static class CorridorBuilder
                 const float zMerge = 0f;
                 var baja = new List<Transform>
                 {
-                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 105f), crossWpRoot),
+                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 145f), crossWpRoot),
                     Wp("Junco_Baja_1", new Vector3(-2.3f, 0f, 11f), crossWpRoot), // alto (semáforo)
                     Wp("Junco_Baja_2", new Vector3(-2.3f, 0f, 7f),  crossWpRoot),
                 };
@@ -314,7 +314,7 @@ public static class CorridorBuilder
                 var sube = new List<Transform>
                 {
                     Wp("Junco_Sube_0", new Vector3(2.3f, 0f, 12f), crossWpRoot),
-                    Wp("Junco_Sube_1", new Vector3(2.3f, 0f, 105f), crossWpRoot),
+                    Wp("Junco_Sube_1", new Vector3(2.3f, 0f, 145f), crossWpRoot),
                 };
                 entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 5f });
             }
@@ -343,7 +343,7 @@ public static class CorridorBuilder
         CarSpawner spawner = spawnerGO.AddComponent<CarSpawner>();
         spawner.carPrefabs = LoadPrefabs();
         spawner.entries = entries.ToArray();
-        spawner.maxCars = 26;
+        spawner.maxCars = 38;
         spawner.carSpeed = CarSpeed;
 
         // ---- Cámara ----
@@ -354,8 +354,8 @@ public static class CorridorBuilder
             camGO.tag = "MainCamera";
             cam = camGO.AddComponent<Camera>();
         }
-        cam.transform.position = new Vector3(-15f, 205f, -120f);
-        cam.transform.rotation = Quaternion.Euler(60f, 0f, 0f);
+        cam.transform.position = new Vector3(-20f, 255f, -150f);
+        cam.transform.rotation = Quaternion.Euler(58f, 0f, 0f);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         AssetDatabase.SaveAssets();
@@ -428,7 +428,7 @@ public static class CorridorBuilder
 
         var rng = new System.Random(12345);
 
-        float[] zRows = { -22f, -38f, -54f, -72f, -92f, 22f, 38f, 54f, 72f, 92f };
+        float[] zRows = { -22f, -40f, -58f, -78f, -100f, -125f, 22f, 40f, 58f, 78f, 100f, 125f };
         for (float bx = RoadXMin + 4f; bx <= RoadXMax - 4f; bx += 13f)
         {
             foreach (float bz in zRows)
