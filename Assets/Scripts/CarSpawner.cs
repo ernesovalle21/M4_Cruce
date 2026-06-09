@@ -55,6 +55,14 @@ public class CarSpawner : MonoBehaviour
         sp._timer -= Time.deltaTime;
         if (sp._timer > 0f) return;
 
+        // Si la entrada del carril está ocupada por otro carro, NO instanciar
+        // encima: reintentar en breve. Evita el apelmazamiento.
+        if (IsSpawnBlocked(sp.spawnTransform))
+        {
+            sp._timer = 0.5f;
+            return;
+        }
+
         sp._timer = sp.interval;
 
         GameObject prefab = carPrefabs[UnityEngine.Random.Range(0, carPrefabs.Length)];
@@ -72,6 +80,20 @@ public class CarSpawner : MonoBehaviour
         notifier.spawner = this;
 
         _activeCars++;
+    }
+
+    /// <summary>True si ya hay un carro cerca del punto de spawn.</summary>
+    private bool IsSpawnBlocked(Transform t)
+    {
+        Vector3 center = t.position + Vector3.up * 0.75f;
+        Vector3 halfExtents = new Vector3(1.5f, 1f, 3f); // ~3 ancho x 6 largo
+        Collider[] hits = Physics.OverlapBox(center, halfExtents, t.rotation);
+        foreach (var h in hits)
+        {
+            if (h == null || h.isTrigger) continue;
+            if (h.CompareTag("Car") || h.transform.root.CompareTag("Car")) return true;
+        }
+        return false;
     }
 
     public void OnCarDestroyed()
