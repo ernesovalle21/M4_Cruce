@@ -39,7 +39,6 @@ public static class CorridorBuilder
     private const float RoadXMax = 130f;
     private const float RoadWidth = 14f;
     private static readonly float[] LaneZ = { -4.5f, 0f, 4.5f };
-    private static readonly float[] CrossLaneX = { -3f, 3f };
     private const float HalfInter = 7f;
     private const float Bz = RoadWidth * 0.5f + 2f;
 
