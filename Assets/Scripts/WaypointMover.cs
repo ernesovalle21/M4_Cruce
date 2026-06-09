@@ -66,6 +66,18 @@ public class WaypointMover : MonoBehaviour
             }
         }
 
+        // Ceder el paso en puntos de conflicto (vueltas / incorporaciones)
+        if (targetSpeed > 0f)
+        {
+            var gate = target.GetComponent<YieldGate>();
+            if (gate != null
+                && Vector3.Distance(transform.position, target.position) < 6f
+                && gate.IsBlocked(transform))
+            {
+                targetSpeed = 0f;
+            }
+        }
+
         // Acelera o frena gradualmente hacia la velocidad objetivo
         float rate = (targetSpeed < currentSpeed) ? braking : acceleration;
         currentSpeed = Mathf.MoveTowards(currentSpeed, targetSpeed, rate * Time.deltaTime);

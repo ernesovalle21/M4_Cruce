@@ -156,12 +156,13 @@ public static class CorridorBuilder
             {
                 if (c.name == S1Name && giraEnS1)
                 {
-                    // Carril derecho: se detiene en S1 y gira para subir por la calle S1 (+Z)
+                    // Carril derecho: se detiene en S1 y gira (arco suave) para subir por S1 (+Z)
                     path.Add(Wp("E_S1_Ante", new Vector3(AnteX(c.x), 0f, z), laneRoot));
-                    path.Add(Wp("E_S1_In",   new Vector3(c.x + 4f,   0f, z),   laneRoot));
-                    path.Add(Wp("E_S1_Arc",  new Vector3(c.x + 2.5f, 0f, 6f),  laneRoot));
-                    path.Add(Wp("E_S1_Up1",  new Vector3(c.x + 2.5f, 0f, 30f), laneRoot));
-                    path.Add(Wp("E_S1_Up2",  new Vector3(c.x + 2.5f, 0f, 76f), laneRoot));
+                    path.Add(Wp("E_S1_In",   new Vector3(c.x + 5f,   0f, z),    laneRoot));
+                    path.Add(Wp("E_S1_Arc1", new Vector3(c.x + 3f,   0f, 5.5f), laneRoot));
+                    path.Add(Wp("E_S1_Arc2", new Vector3(c.x + 2.5f, 0f, 8f),   laneRoot));
+                    path.Add(Wp("E_S1_Up1",  new Vector3(c.x + 2.5f, 0f, 30f),  laneRoot));
+                    path.Add(Wp("E_S1_Up2",  new Vector3(c.x + 2.5f, 0f, 76f),  laneRoot));
                     terminado = true;
                     break;
                 }
@@ -263,26 +264,30 @@ public static class CorridorBuilder
             }
             else if (isT)
             {
-                // Junco: T de doble sentido. El carril que baja se detiene y da vuelta
-                // para incorporarse al carril norte de Elizondo (en el sentido Dir).
-                const float zNorte = 4.5f;
-                float mergeX = PostX(c.x) + Dir * 4f; // ya dentro del carril, aguas abajo del cruce
+                // Junco: T de doble sentido. El carril que baja se detiene, cede el
+                // paso y da vuelta para incorporarse al carril CENTRAL (sigue derecho).
+                const float zMerge = 0f;
                 var baja = new List<Transform>
                 {
-                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 60f),  crossWpRoot),
-                    Wp("Junco_Baja_1", new Vector3(-2.3f, 0f, 11f),  crossWpRoot), // alto (semáforo transversal)
-                    Wp("Junco_Baja_2", new Vector3(-2.3f, 0f, 6f),   crossWpRoot),
-                    Wp("Junco_Baja_3", new Vector3(Dir * 1.5f, 0f, 5.0f), crossWpRoot), // arco de vuelta
-                    Wp("Junco_Baja_4", new Vector3(mergeX, 0f, zNorte), crossWpRoot),   // incorporado
+                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 60f), crossWpRoot),
+                    Wp("Junco_Baja_1", new Vector3(-2.3f, 0f, 11f), crossWpRoot), // alto (semáforo)
+                    Wp("Junco_Baja_2", new Vector3(-2.3f, 0f, 7f),  crossWpRoot),
                 };
-                // Desde el merge, sigue por el carril norte hasta la salida pasando los cruces aguas abajo
+                // Punto de cesión: espera si el carril central de la intersección está ocupado
+                Transform arco = Wp("Junco_Baja_3", new Vector3(-3f, 0f, 3f), crossWpRoot);
+                var yg = arco.gameObject.AddComponent<YieldGate>();
+                yg.checkOffset = new Vector3(-4f, 0f, -3f);    // zona sobre el carril central
+                yg.halfExtents = new Vector3(6f, 1.5f, 1.6f);
+                baja.Add(arco);
+                baja.Add(Wp("Junco_Baja_4", new Vector3(-6.5f, 0f, 0.5f), crossWpRoot)); // arco
+                baja.Add(Wp("Junco_Baja_5", new Vector3(-12f, 0f, zMerge), crossWpRoot)); // incorporado
                 foreach (var cc in ordered)
                 {
                     if (Dir < 0 ? cc.x >= c.x : cc.x <= c.x) continue; // solo cruces aguas abajo
-                    baja.Add(Wp($"Junco_Baja_Ante_{cc.name}", new Vector3(AnteX(cc.x), 0f, zNorte), crossWpRoot));
-                    baja.Add(Wp($"Junco_Baja_Post_{cc.name}", new Vector3(PostX(cc.x), 0f, zNorte), crossWpRoot));
+                    baja.Add(Wp($"Junco_Baja_Ante_{cc.name}", new Vector3(AnteX(cc.x), 0f, zMerge), crossWpRoot));
+                    baja.Add(Wp($"Junco_Baja_Post_{cc.name}", new Vector3(PostX(cc.x), 0f, zMerge), crossWpRoot));
                 }
-                baja.Add(Wp("Junco_Baja_Salida", new Vector3(exitX, 0f, zNorte), crossWpRoot));
+                baja.Add(Wp("Junco_Baja_Salida", new Vector3(exitX, 0f, zMerge), crossWpRoot));
                 entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 7f });
 
                 // Carril que sube (se aleja por Junco)
