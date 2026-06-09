@@ -61,7 +61,7 @@ public static class CorridorBuilder
     {
         new Cross("S1_GarciaRoel", -90.0f, +1), // cruce mayor al extremo izquierdo
         new Cross("S2_JuncoT",       0.0f, +1),
-        new Cross("S3_GarzaSada",   50.0f, -1),
+        new Cross("S3_GarzaSada",   80.0f, -1),
     };
 
     private const string JuncoName = "S2_JuncoT";
