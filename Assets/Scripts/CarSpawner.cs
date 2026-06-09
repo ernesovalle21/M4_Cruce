@@ -26,28 +26,47 @@ public class CarSpawner : MonoBehaviour
     [Tooltip("Velocidad que se asigna a cada carro al instanciarlo (0 = usar la del prefab).")]
     public float carSpeed = 0f;
 
+    [Header("Variación de tráfico (horas pico cíclicas)")]
+    public bool rushHourCycle = true;
+    [Tooltip("Segundos de un ciclo completo valle->pico->valle.")]
+    public float rushPeriod = 50f;
+    [Tooltip("Factor de densidad en el valle (tráfico bajo).")]
+    public float minDensity = 0.4f;
+    [Tooltip("Factor de densidad en el pico (tráfico alto).")]
+    public float maxDensity = 1.5f;
+
     private int _activeCars = 0;
+
+    private float DensityFactor()
+    {
+        if (!rushHourCycle) return 1f;
+        float p = (Mathf.Sin(Time.time * 2f * Mathf.PI / Mathf.Max(1f, rushPeriod)) + 1f) * 0.5f;
+        return Mathf.Lerp(minDensity, maxDensity, p);
+    }
 
     void Update()
     {
+        float factor = DensityFactor();
+        int effMax = Mathf.Max(1, Mathf.RoundToInt(maxCars * factor));
+
         if (entries != null && entries.Length > 0)
         {
             foreach (var e in entries)
             {
-                if (_activeCars >= maxCars) return;
-                TrySpawn(e);
+                if (_activeCars >= effMax) return;
+                TrySpawn(e, factor);
             }
             return;
         }
 
         // Comportamiento legado (cruce base de 2 entradas)
-        if (_activeCars >= maxCars) return;
-        TrySpawn(juncoEntry);
-        if (_activeCars >= maxCars) return;
-        TrySpawn(elizondoEntry);
+        if (_activeCars >= effMax) return;
+        TrySpawn(juncoEntry, factor);
+        if (_activeCars >= effMax) return;
+        TrySpawn(elizondoEntry, factor);
     }
 
-    private void TrySpawn(SpawnPoint sp)
+    private void TrySpawn(SpawnPoint sp, float factor)
     {
         if (sp == null || sp.spawnTransform == null) return;
         if (carPrefabs == null || carPrefabs.Length == 0) return;
@@ -63,7 +82,8 @@ public class CarSpawner : MonoBehaviour
             return;
         }
 
-        sp._timer = sp.interval;
+        // Más densidad (factor alto) = menor intervalo = más carros.
+        sp._timer = sp.interval / Mathf.Max(0.05f, factor);
 
         GameObject prefab = carPrefabs[UnityEngine.Random.Range(0, carPrefabs.Length)];
         if (prefab == null) return;
