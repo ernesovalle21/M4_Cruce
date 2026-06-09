@@ -20,10 +20,16 @@ public class TrafficLight : MonoBehaviour
     public float startOffset = 0f;
 
     [Header("Visual")]
-    public Renderer lampRenderer;
+    public Renderer lampRenderer;        // indicador único (opcional / compatibilidad)
     public Material matGreen;
     public Material matYellow;
     public Material matRed;
+
+    [Header("Focos (3 luces, opcional)")]
+    public Renderer redLamp;
+    public Renderer yellowLamp;
+    public Renderer greenLamp;
+    public Material lampOff;              // material gris oscuro para focos apagados
 
     [Header("Compatibilidad (no usados por el modelo determinista)")]
     public Phase startPhase = Phase.Green;   // conservado por compatibilidad con builders previos
@@ -85,10 +91,21 @@ public class TrafficLight : MonoBehaviour
 
     private void ApplyMaterial()
     {
-        if (lampRenderer == null) return;
-        Material m = currentPhase == Phase.Green ? matGreen
-                   : currentPhase == Phase.Yellow ? matYellow
-                   : matRed;
-        if (m != null) lampRenderer.material = m;
+        // Modo 3 focos: enciende solo el activo, los demás apagados.
+        if (redLamp != null || yellowLamp != null || greenLamp != null)
+        {
+            if (redLamp != null)    redLamp.material    = currentPhase == Phase.Red    ? matRed    : lampOff;
+            if (yellowLamp != null) yellowLamp.material = currentPhase == Phase.Yellow ? matYellow : lampOff;
+            if (greenLamp != null)  greenLamp.material  = currentPhase == Phase.Green  ? matGreen  : lampOff;
+        }
+
+        // Indicador único (compatibilidad).
+        if (lampRenderer != null)
+        {
+            Material m = currentPhase == Phase.Green ? matGreen
+                       : currentPhase == Phase.Yellow ? matYellow
+                       : matRed;
+            if (m != null) lampRenderer.material = m;
+        }
     }
 }
