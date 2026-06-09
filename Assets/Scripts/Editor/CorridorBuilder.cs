@@ -55,6 +55,9 @@ public static class CorridorBuilder
         new Cross("S3_GarzaSada",   50.0f, -1),
     };
 
+    // Junco es la única calle modelada como T real de doble sentido (con vuelta).
+    private const string JuncoName = "S2_JuncoT";
+
     [MenuItem("M4Cruce/Construir Corredor (Limpio)")]
     public static void Build()
     {
@@ -98,7 +101,7 @@ public static class CorridorBuilder
         {
             var gap = new Vector2(c.x - HalfInter, c.x + HalfInter);
             northGaps.Add(gap);
-            southGaps.Add(gap);
+            if (c.name != JuncoName) southGaps.Add(gap); // Junco es T: banqueta sur continua
         }
         BuildSidewalk("Banqueta_Norte",  Bz, northGaps, R, matBanqueta);
         BuildSidewalk("Banqueta_Sur",   -Bz, southGaps, R, matBanqueta);
@@ -151,18 +154,23 @@ public static class CorridorBuilder
             g.transform.SetParent(R, false);
             Transform G = g.transform;
 
-            // Brazo largo (lado c.side) y stub corto (lado opuesto) -> calle pasante
-            Cube(c.name + "_Road_Largo", new Vector3(c.x, -0.05f, c.side * 47f), new Vector3(14f, 0.1f, 80f), matAsfalto, G);
-            Cube(c.name + "_Road_Stub",  new Vector3(c.x, -0.05f, -c.side * 20f), new Vector3(14f, 0.1f, 28f), matAsfalto, G);
-            Cube(c.name + "_Inter", new Vector3(c.x, -0.04f, 0f), new Vector3(14f, 0.1f, 14f), matInter, G);
+            bool isT = c.name == JuncoName;
 
-            // Líneas centrales y banquetas de la transversal (ambos brazos)
+            // Brazo largo (lado c.side)
+            Cube(c.name + "_Road_Largo", new Vector3(c.x, -0.05f, c.side * 47f), new Vector3(14f, 0.1f, 80f), matAsfalto, G);
+            Cube(c.name + "_Inter", new Vector3(c.x, -0.04f, 0f), new Vector3(14f, 0.1f, 14f), matInter, G);
             Cube(c.name + "_LineaC_L", new Vector3(c.x, -0.035f, c.side * 47f), new Vector3(0.25f, 0.01f, 70f), matLinea, G);
-            Cube(c.name + "_LineaC_S", new Vector3(c.x, -0.035f, -c.side * 20f), new Vector3(0.25f, 0.01f, 22f), matLinea, G);
             Cube(c.name + "_BanqL_W", new Vector3(c.x - 9f, 0f, c.side * 47f), new Vector3(4f, 0.2f, 80f), matBanqueta, G);
             Cube(c.name + "_BanqL_E", new Vector3(c.x + 9f, 0f, c.side * 47f), new Vector3(4f, 0.2f, 80f), matBanqueta, G);
-            Cube(c.name + "_BanqS_W", new Vector3(c.x - 9f, 0f, -c.side * 20f), new Vector3(4f, 0.2f, 28f), matBanqueta, G);
-            Cube(c.name + "_BanqS_E", new Vector3(c.x + 9f, 0f, -c.side * 20f), new Vector3(4f, 0.2f, 28f), matBanqueta, G);
+
+            // Stub del lado opuesto: solo en cruces pasantes (Junco es T, no lo lleva)
+            if (!isT)
+            {
+                Cube(c.name + "_Road_Stub", new Vector3(c.x, -0.05f, -c.side * 20f), new Vector3(14f, 0.1f, 28f), matAsfalto, G);
+                Cube(c.name + "_LineaC_S",  new Vector3(c.x, -0.035f, -c.side * 20f), new Vector3(0.25f, 0.01f, 22f), matLinea, G);
+                Cube(c.name + "_BanqS_W",   new Vector3(c.x - 9f, 0f, -c.side * 20f), new Vector3(4f, 0.2f, 28f), matBanqueta, G);
+                Cube(c.name + "_BanqS_E",   new Vector3(c.x + 9f, 0f, -c.side * 20f), new Vector3(4f, 0.2f, 28f), matBanqueta, G);
+            }
 
             float offset = Mathf.Repeat((c.x - firstX) / CarSpeed, cycle);
 
@@ -189,25 +197,53 @@ public static class CorridorBuilder
             Cube(c.name + "_AltoCross", new Vector3(c.x, -0.03f, crossStopZ), new Vector3(RoadWidth, 0.01f, 0.9f), matLinea, G);
             BuildStopLine(c.name + "_Cross", new Vector3(c.x, 0f, crossStopZ), new Vector3(RoadWidth, 3f, 3f), tlCross, G);
 
-            // --- Waypoints + entradas de tráfico transversal (carril doble) ---
+            // --- Tráfico transversal ---
             Transform crossWpRoot = new GameObject("WP_" + c.name).transform;
             crossWpRoot.SetParent(wpRoot, false);
-            for (int cl = 0; cl < CrossLaneX.Length; cl++)
+
+            if (isT)
             {
-                float lx = c.x + CrossLaneX[cl];
-                var path = new List<Transform>
+                // Junco: T de doble sentido (carriles opuestos).
+                // Carril que BAJA (-Z): se detiene en el semáforo y da vuelta para
+                // incorporarse al carril norte de Elizondo (+X).
+                const float zNorte = 4.5f;
+                var baja = new List<Transform>
                 {
-                    Wp($"{c.name}_C{cl}_Entrada", new Vector3(lx, 0f,  c.side * 60f), crossWpRoot),
-                    Wp($"{c.name}_C{cl}_Ante",    new Vector3(lx, 0f,  c.side * (HalfInter + 4f)), crossWpRoot),
-                    Wp($"{c.name}_C{cl}_Post",    new Vector3(lx, 0f, -c.side * (HalfInter + 3f)), crossWpRoot),
-                    Wp($"{c.name}_C{cl}_Salida",  new Vector3(lx, 0f, -c.side * 30f), crossWpRoot),
+                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 60f),   crossWpRoot),
+                    Wp("Junco_Baja_1", new Vector3(-2.3f, 0f, 11f),   crossWpRoot), // alto (semáforo transversal)
+                    Wp("Junco_Baja_2", new Vector3(-2.3f, 0f, 6f),    crossWpRoot),
+                    Wp("Junco_Baja_3", new Vector3(-0.5f, 0f, 5.0f),  crossWpRoot), // arco de vuelta
+                    Wp("Junco_Baja_4", new Vector3( 2.0f, 0f, zNorte), crossWpRoot), // ya incorporado
+                    Wp("Junco_Baja_5", new Vector3(36f,  0f, zNorte),  crossWpRoot), // ante S3
+                    Wp("Junco_Baja_6", new Vector3(60f,  0f, zNorte),  crossWpRoot), // post S3
+                    Wp("Junco_Baja_7", new Vector3(85f,  0f, zNorte),  crossWpRoot), // salida
                 };
-                entries.Add(new CarSpawner.SpawnPoint
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 4f });
+
+                // Carril que SUBE (+Z): nace cerca del cruce (como si saliera de Elizondo)
+                // y se aleja por Junco.
+                var sube = new List<Transform>
                 {
-                    spawnTransform = path[0],
-                    waypoints = path.ToArray(),
-                    interval = 5f
-                });
+                    Wp("Junco_Sube_0", new Vector3(2.3f, 0f, 12f), crossWpRoot),
+                    Wp("Junco_Sube_1", new Vector3(2.3f, 0f, 60f), crossWpRoot),
+                };
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 5f });
+            }
+            else
+            {
+                // Cruces pasantes: 2 carriles del mismo sentido cruzan recto.
+                for (int cl = 0; cl < CrossLaneX.Length; cl++)
+                {
+                    float lx = c.x + CrossLaneX[cl];
+                    var path = new List<Transform>
+                    {
+                        Wp($"{c.name}_C{cl}_Entrada", new Vector3(lx, 0f,  c.side * 60f), crossWpRoot),
+                        Wp($"{c.name}_C{cl}_Ante",    new Vector3(lx, 0f,  c.side * (HalfInter + 4f)), crossWpRoot),
+                        Wp($"{c.name}_C{cl}_Post",    new Vector3(lx, 0f, -c.side * (HalfInter + 3f)), crossWpRoot),
+                        Wp($"{c.name}_C{cl}_Salida",  new Vector3(lx, 0f, -c.side * 30f), crossWpRoot),
+                    };
+                    entries.Add(new CarSpawner.SpawnPoint { spawnTransform = path[0], waypoints = path.ToArray(), interval = 5f });
+                }
             }
         }
 
