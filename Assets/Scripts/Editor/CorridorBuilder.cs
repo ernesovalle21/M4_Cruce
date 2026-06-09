@@ -43,10 +43,8 @@ public static class CorridorBuilder
     private const float Bz = RoadWidth * 0.5f + 2f;
 
     // Longitud de los brazos de las calles transversales (calles más largas)
-    private const float ArmLong = 150f;   // brazo largo
-    private const float ArmStub = 80f;    // brazo corto (pasante)
-    private const float S1ArmN = 130f;    // S1: brazo norte
-    private const float S1ArmS = 185f;    // S1: brazo sur (más largo)
+    private const float ArmLen = 190f;    // longitud de los brazos transversales (llenan el verde)
+    private const float LeftWidth = 10f;  // calle izquierda (Garza Sada): angosta, 1 carril
 
     private struct Cross
     {
@@ -56,18 +54,19 @@ public static class CorridorBuilder
         public Cross(string n, float x, int s) { name = n; this.x = x; side = s; }
     }
 
-    // Distancias reales a escala (1 u = 10 m): S1-S2 = 345 m, S2-S3 = 500 m.
+    // Identidades por POSICIÓN en la escena: izquierda = Garza Sada, centro = Junco,
+    // derecha = García Roel. (Ajusta las X libremente.)
     private static readonly Cross[] Crosses =
     {
-        new Cross("S1_GarciaRoel", -90.0f, +1), // cruce mayor al extremo izquierdo
-        new Cross("S2_JuncoT",       0.0f, +1),
-        new Cross("S3_GarzaSada",  130.0f, -1),
+        new Cross("S1_Izq_GarzaSada",  -90.0f, +1), // izquierda: Garza Sada (angosta, 1 carril)
+        new Cross("S2_JuncoT",           0.0f, +1), // centro: Junco (T doble sentido)
+        new Cross("S3_Der_GarciaRoel", 130.0f, -1), // derecha: García Roel (cruz completa)
     };
 
     private const string JuncoName = "S2_JuncoT";
-    private const string S1Name = "S1_GarciaRoel";
-    private const float RightLaneZ = 4.5f;  // carril derecho (norte) que gira en S1
-    private const float S1Width = 20f;      // S1 es un cruce mayor (más ancho)
+    private const string S1Name = "S1_Izq_GarzaSada";   // calle IZQ de la escena
+    private const string S3Name = "S3_Der_GarciaRoel";  // calle DER de la escena
+    private const float RightLaneZ = 4.5f;  // carril derecho que gira en la izquierda (S1)
 
     // Lado por el que los carros se aproximan a un cruce (aguas arriba)
     private static float AnteX(float x) => x - Dir * (HalfInter + 7f);
@@ -107,7 +106,7 @@ public static class CorridorBuilder
         float roadCenterX = (RoadXMin + RoadXMax) * 0.5f;
         float roadLen = RoadXMax - RoadXMin;
 
-        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 160f, 0.1f, 430f), matPasto, R);
+        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 180f, 0.1f, 440f), matPasto, R);
         Cube("Elizondo_Road", new Vector3(roadCenterX, -0.05f, 0f), new Vector3(roadLen, 0.1f, RoadWidth), matAsfalto, R);
 
         // Banquetas segmentadas
@@ -195,41 +194,33 @@ public static class CorridorBuilder
 
             bool isT = c.name == JuncoName;
             bool isS1 = c.name == S1Name;
+            float cw = isS1 ? LeftWidth : RoadWidth; // ancho de la calle transversal
 
-            if (isS1)
+            if (isT)
             {
-                // Cruce mayor en cruz (+): más ancho y con brazos largos (sur más largo)
-                float w = S1Width;
-                float bq = w * 0.5f + 2f;
-                float nCtr =  (HalfInter + S1ArmN * 0.5f);
-                float sCtr = -(HalfInter + S1ArmS * 0.5f);
-                Cube(c.name + "_Road_N", new Vector3(c.x, -0.05f, nCtr), new Vector3(w, 0.1f, S1ArmN), matAsfalto, G);
-                Cube(c.name + "_Road_S", new Vector3(c.x, -0.05f, sCtr), new Vector3(w, 0.1f, S1ArmS), matAsfalto, G);
-                Cube(c.name + "_Inter",  new Vector3(c.x, -0.04f, 0f),   new Vector3(w, 0.1f, 14f), matInter, G);
-                Cube(c.name + "_LineaC_N", new Vector3(c.x - 3.5f, -0.035f, nCtr), new Vector3(0.25f, 0.01f, S1ArmN - 6f), matLinea, G);
-                Cube(c.name + "_LineaC_S", new Vector3(c.x - 3.5f, -0.035f, sCtr), new Vector3(0.25f, 0.01f, S1ArmS - 6f), matLinea, G);
-                Cube(c.name + "_BanqN_W", new Vector3(c.x - bq, 0f, nCtr), new Vector3(4f, 0.2f, S1ArmN), matBanqueta, G);
-                Cube(c.name + "_BanqN_E", new Vector3(c.x + bq, 0f, nCtr), new Vector3(4f, 0.2f, S1ArmN), matBanqueta, G);
-                Cube(c.name + "_BanqS_W", new Vector3(c.x - bq, 0f, sCtr), new Vector3(4f, 0.2f, S1ArmS), matBanqueta, G);
-                Cube(c.name + "_BanqS_E", new Vector3(c.x + bq, 0f, sCtr), new Vector3(4f, 0.2f, S1ArmS), matBanqueta, G);
+                // Junco: T (un solo brazo, al norte)
+                float armCtr = c.side * (HalfInter + ArmLen * 0.5f);
+                Cube(c.name + "_Road_Largo", new Vector3(c.x, -0.05f, armCtr), new Vector3(14f, 0.1f, ArmLen), matAsfalto, G);
+                Cube(c.name + "_Inter", new Vector3(c.x, -0.04f, 0f), new Vector3(14f, 0.1f, 14f), matInter, G);
+                Cube(c.name + "_LineaC_L", new Vector3(c.x, -0.035f, armCtr), new Vector3(0.25f, 0.01f, ArmLen - 6f), matLinea, G);
+                Cube(c.name + "_BanqL_W", new Vector3(c.x - 9f, 0f, armCtr), new Vector3(4f, 0.2f, ArmLen), matBanqueta, G);
+                Cube(c.name + "_BanqL_E", new Vector3(c.x + 9f, 0f, armCtr), new Vector3(4f, 0.2f, ArmLen), matBanqueta, G);
             }
             else
             {
-                float armCtr = c.side * (HalfInter + ArmLong * 0.5f);
-                Cube(c.name + "_Road_Largo", new Vector3(c.x, -0.05f, armCtr), new Vector3(14f, 0.1f, ArmLong), matAsfalto, G);
-                Cube(c.name + "_Inter", new Vector3(c.x, -0.04f, 0f), new Vector3(14f, 0.1f, 14f), matInter, G);
-                Cube(c.name + "_LineaC_L", new Vector3(c.x, -0.035f, armCtr), new Vector3(0.25f, 0.01f, ArmLong - 6f), matLinea, G);
-                Cube(c.name + "_BanqL_W", new Vector3(c.x - 9f, 0f, armCtr), new Vector3(4f, 0.2f, ArmLong), matBanqueta, G);
-                Cube(c.name + "_BanqL_E", new Vector3(c.x + 9f, 0f, armCtr), new Vector3(4f, 0.2f, ArmLong), matBanqueta, G);
-
-                if (!isT)
-                {
-                    float stubCtr = -c.side * (HalfInter + ArmStub * 0.5f);
-                    Cube(c.name + "_Road_Stub", new Vector3(c.x, -0.05f, stubCtr), new Vector3(14f, 0.1f, ArmStub), matAsfalto, G);
-                    Cube(c.name + "_LineaC_S",  new Vector3(c.x, -0.035f, stubCtr), new Vector3(0.25f, 0.01f, ArmStub - 6f), matLinea, G);
-                    Cube(c.name + "_BanqS_W",   new Vector3(c.x - 9f, 0f, stubCtr), new Vector3(4f, 0.2f, ArmStub), matBanqueta, G);
-                    Cube(c.name + "_BanqS_E",   new Vector3(c.x + 9f, 0f, stubCtr), new Vector3(4f, 0.2f, ArmStub), matBanqueta, G);
-                }
+                // Cruz completa (+): dos brazos largos a ambos lados (no se cortan).
+                float bq = cw * 0.5f + 2f;
+                float nCtr =  (HalfInter + ArmLen * 0.5f);
+                float sCtr = -(HalfInter + ArmLen * 0.5f);
+                Cube(c.name + "_Road_N", new Vector3(c.x, -0.05f, nCtr), new Vector3(cw, 0.1f, ArmLen), matAsfalto, G);
+                Cube(c.name + "_Road_S", new Vector3(c.x, -0.05f, sCtr), new Vector3(cw, 0.1f, ArmLen), matAsfalto, G);
+                Cube(c.name + "_Inter",  new Vector3(c.x, -0.04f, 0f),   new Vector3(cw, 0.1f, 14f), matInter, G);
+                Cube(c.name + "_LineaC_N", new Vector3(c.x, -0.035f, nCtr), new Vector3(0.25f, 0.01f, ArmLen - 6f), matLinea, G);
+                Cube(c.name + "_LineaC_S", new Vector3(c.x, -0.035f, sCtr), new Vector3(0.25f, 0.01f, ArmLen - 6f), matLinea, G);
+                Cube(c.name + "_BanqN_W", new Vector3(c.x - bq, 0f, nCtr), new Vector3(4f, 0.2f, ArmLen), matBanqueta, G);
+                Cube(c.name + "_BanqN_E", new Vector3(c.x + bq, 0f, nCtr), new Vector3(4f, 0.2f, ArmLen), matBanqueta, G);
+                Cube(c.name + "_BanqS_W", new Vector3(c.x - bq, 0f, sCtr), new Vector3(4f, 0.2f, ArmLen), matBanqueta, G);
+                Cube(c.name + "_BanqS_E", new Vector3(c.x + bq, 0f, sCtr), new Vector3(4f, 0.2f, ArmLen), matBanqueta, G);
             }
 
             float offset = Mathf.Abs(c.x - firstX) / CarSpeed;
@@ -247,14 +238,14 @@ public static class CorridorBuilder
 
             // Semáforo transversal (contrafase). En S1 el tráfico sube (+Z): alto del lado sur.
             float crossOffset = Mathf.Repeat(offset + GreenDur + YellowDur + AllRed, cycle);
-            int crossSide = isS1 ? -1 : c.side;            // lado por el que llegan los carros transversales
+            int crossSide = isT ? c.side : -1;             // cruces completas: tráfico sube (+Z), llega por el sur
             float crossStopZ = crossSide * (HalfInter + 4f);
             TrafficLight tlCross = BuildLight(c.name + "_Cross",
                 new Vector3(c.x + 8.5f, 0f, crossStopZ + crossSide * 2f), crossOffset, c.side,
                 CrossGreen, CrossYellow, CrossRed, new Vector3(-0.35f, 0f, 0f),
                 matSemCaja, matVerde, matAmarillo, matRojo, matFocoOff, G);
 
-            float crossW = isS1 ? S1Width : RoadWidth;
+            float crossW = cw;
             BuildCrosswalk(c.name + "_Cross", new Vector3(c.x, -0.03f, crossSide * (HalfInter + 2f)), false, matLinea, G);
             Cube(c.name + "_AltoCross", new Vector3(c.x, -0.03f, crossStopZ), new Vector3(crossW, 0.01f, 0.9f), matLinea, G);
             BuildStopLine(c.name + "_Cross", new Vector3(c.x, 0f, crossStopZ), new Vector3(crossW, 3f, 3f), tlCross, G);
@@ -263,33 +254,14 @@ public static class CorridorBuilder
             Transform crossWpRoot = new GameObject("WP_" + c.name).transform;
             crossWpRoot.SetParent(wpRoot, false);
 
-            if (isS1)
-            {
-                // S1: cruce mayor con tráfico transversal de un sentido hacia arriba (+Z), 2 carriles.
-                float southEnd = -(HalfInter + S1ArmS) + 6f;
-                float northEnd =  (HalfInter + S1ArmN) - 6f;
-                float[] s1Lanes = { c.x - 5f, c.x - 1.5f };
-                for (int cl = 0; cl < s1Lanes.Length; cl++)
-                {
-                    float lx = s1Lanes[cl];
-                    var sube = new List<Transform>
-                    {
-                        Wp($"S1_Sube{cl}_0", new Vector3(lx, 0f, southEnd),   crossWpRoot),
-                        Wp($"S1_Sube{cl}_1", new Vector3(lx, 0f, crossStopZ), crossWpRoot), // alto
-                        Wp($"S1_Sube{cl}_2", new Vector3(lx, 0f,  11f),       crossWpRoot),
-                        Wp($"S1_Sube{cl}_3", new Vector3(lx, 0f, northEnd),   crossWpRoot),
-                    };
-                    entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 6f });
-                }
-            }
-            else if (isT)
+            if (isT)
             {
                 // Junco: T de doble sentido. El carril que baja se detiene, cede el
                 // paso y da vuelta para incorporarse al carril CENTRAL (sigue derecho).
                 const float zMerge = 0f;
                 var baja = new List<Transform>
                 {
-                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 145f), crossWpRoot),
+                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 185f), crossWpRoot),
                     Wp("Junco_Baja_1", new Vector3(-2.3f, 0f, 11f), crossWpRoot), // alto (semáforo)
                     Wp("Junco_Baja_2", new Vector3(-2.3f, 0f, 7f),  crossWpRoot),
                 };
@@ -314,23 +286,25 @@ public static class CorridorBuilder
                 var sube = new List<Transform>
                 {
                     Wp("Junco_Sube_0", new Vector3(2.3f, 0f, 12f), crossWpRoot),
-                    Wp("Junco_Sube_1", new Vector3(2.3f, 0f, 145f), crossWpRoot),
+                    Wp("Junco_Sube_1", new Vector3(2.3f, 0f, 185f), crossWpRoot),
                 };
                 entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 5f });
             }
             else
             {
-                // Garza Sada (pasante) de UN solo carril que cruza recto.
-                float farLong = c.side * (HalfInter + ArmLong - 6f);
-                float farStub = -c.side * (HalfInter + ArmStub - 6f);
-                var path = new List<Transform>
+                // Cruz completa de UN solo carril que sube (+Z). En S1 (izquierda) el
+                // carril va corrido a la izquierda para dejar pasar la vuelta de Elizondo.
+                float southEnd = -(HalfInter + ArmLen) + 6f;
+                float northEnd =  (HalfInter + ArmLen) - 6f;
+                float lx = isS1 ? c.x - 2.5f : c.x;
+                var sube = new List<Transform>
                 {
-                    Wp($"{c.name}_C0_Entrada", new Vector3(c.x, 0f, farLong), crossWpRoot),
-                    Wp($"{c.name}_C0_Ante",    new Vector3(c.x, 0f,  c.side * (HalfInter + 4f)), crossWpRoot),
-                    Wp($"{c.name}_C0_Post",    new Vector3(c.x, 0f, -c.side * (HalfInter + 3f)), crossWpRoot),
-                    Wp($"{c.name}_C0_Salida",  new Vector3(c.x, 0f, farStub), crossWpRoot),
+                    Wp($"{c.name}_Sube_0", new Vector3(lx, 0f, southEnd),   crossWpRoot),
+                    Wp($"{c.name}_Sube_1", new Vector3(lx, 0f, crossStopZ), crossWpRoot), // alto
+                    Wp($"{c.name}_Sube_2", new Vector3(lx, 0f,  11f),       crossWpRoot),
+                    Wp($"{c.name}_Sube_3", new Vector3(lx, 0f, northEnd),   crossWpRoot),
                 };
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = path[0], waypoints = path.ToArray(), interval = 5f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 6f });
             }
         }
 
@@ -354,8 +328,8 @@ public static class CorridorBuilder
             camGO.tag = "MainCamera";
             cam = camGO.AddComponent<Camera>();
         }
-        cam.transform.position = new Vector3(-20f, 255f, -150f);
-        cam.transform.rotation = Quaternion.Euler(58f, 0f, 0f);
+        cam.transform.position = new Vector3(-5f, 295f, -190f);
+        cam.transform.rotation = Quaternion.Euler(57f, 0f, 0f);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         AssetDatabase.SaveAssets();
@@ -414,7 +388,7 @@ public static class CorridorBuilder
         if (Mathf.Abs(z) <= Bz + 2f + margin) return true;
         foreach (var c in Crosses)
         {
-            float half = (c.name == S1Name ? S1Width * 0.5f + 2f : 9f);
+            float half = (c.name == S1Name ? LeftWidth * 0.5f + 2f : 9f);
             if (Mathf.Abs(x - c.x) <= half + margin) return true;
         }
         return false;
@@ -428,7 +402,7 @@ public static class CorridorBuilder
 
         var rng = new System.Random(12345);
 
-        float[] zRows = { -22f, -40f, -58f, -78f, -100f, -125f, 22f, 40f, 58f, 78f, 100f, 125f };
+        float[] zRows = { -25f, -50f, -78f, -110f, -148f, -185f, 25f, 50f, 78f, 110f, 148f, 185f };
         for (float bx = RoadXMin + 4f; bx <= RoadXMax - 4f; bx += 13f)
         {
             foreach (float bz in zRows)
