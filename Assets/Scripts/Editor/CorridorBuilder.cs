@@ -238,7 +238,9 @@ public static class CorridorBuilder
                 GreenDur, YellowDur, RedDur, new Vector3(0f, 0f, -c.side * 0.35f),
                 matSemCaja, matVerde, matAmarillo, matRojo, matFocoOff, G);
 
-            BuildCrosswalk(c.name + "_Eliz", new Vector3(c.x - Dir * (HalfInter + 2f), -0.03f, 0f), true, matLinea, G);
+            // Junco: cruce peatonal COMPLETO (prueba). Los demás: cebra de aproximación (por ahora).
+            if (!isT)
+                BuildCrosswalk(c.name + "_Eliz", new Vector3(c.x - Dir * (HalfInter + 2f), -0.03f, 0f), true, RoadWidth - 1f, matLinea, G);
             Cube(c.name + "_AltoEliz", new Vector3(elizLightX, -0.03f, 0f), new Vector3(0.9f, 0.01f, RoadWidth), matLinea, G);
             StopLineTrigger elizStop = BuildStopLine(c.name + "_Eliz", new Vector3(elizLightX, 0f, 0f), new Vector3(3f, 3f, RoadWidth), tlEliz, new Vector3(c.x, 0f, 0f), G);
 
@@ -252,7 +254,10 @@ public static class CorridorBuilder
                 matSemCaja, matVerde, matAmarillo, matRojo, matFocoOff, G);
 
             float crossW = cw;
-            BuildCrosswalk(c.name + "_Cross", new Vector3(c.x, -0.03f, crossSide * (HalfInter + 2f)), false, matLinea, G);
+            if (isT)
+                BuildCrosswalkBox(c.name, c.x, isT, crossW, matLinea, G); // cruce peatonal completo en Junco
+            else
+                BuildCrosswalk(c.name + "_Cross", new Vector3(c.x, -0.03f, crossSide * (HalfInter + 2f)), false, crossW, matLinea, G);
             Cube(c.name + "_AltoCross", new Vector3(c.x, -0.03f, crossStopZ), new Vector3(crossW, 0.01f, 0.9f), matLinea, G);
             StopLineTrigger crossStop = BuildStopLine(c.name + "_Cross", new Vector3(c.x, 0f, crossStopZ), new Vector3(crossW, 3f, 3f), tlCross, new Vector3(c.x, 0f, 0f), G);
 
@@ -354,7 +359,7 @@ public static class CorridorBuilder
                 sube.Add(sg);
                 sube.Add(Wp("GR_Sube_2", new Vector3(c.x + 2.5f, 0f, 11f),      crossWpRoot));
                 sube.Add(Wp("GR_Sube_3", new Vector3(c.x + 2.5f, 0f, northEnd), crossWpRoot));
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 9f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 5.5f });
 
                 // Carril izquierdo: BAJA (-Z), alto en el norte + cede el paso antes de cruzar
                 var baja = new List<Transform>
@@ -369,7 +374,7 @@ public static class CorridorBuilder
                 baja.Add(bg);
                 baja.Add(Wp("GR_Baja_2", new Vector3(c.x - 2.5f, 0f, -11f),     crossWpRoot));
                 baja.Add(Wp("GR_Baja_3", new Vector3(c.x - 2.5f, 0f, southEnd), crossWpRoot));
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 9f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 5.5f });
 
                 // Alto + semáforo (trigger) del lado norte para el sentido que baja
                 Cube(c.name + "_AltoCrossN", new Vector3(c.x, -0.03f, northStopZ), new Vector3(crossW, 0.01f, 0.9f), matLinea, G);
@@ -389,7 +394,7 @@ public static class CorridorBuilder
                     Wp($"{c.name}_Sube_2", new Vector3(lx, 0f,  11f),       crossWpRoot),
                     Wp($"{c.name}_Sube_3", new Vector3(lx, 0f, northEnd),   crossWpRoot),
                 };
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 9f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 6f });
             }
         }
 
@@ -402,7 +407,7 @@ public static class CorridorBuilder
         CarSpawner spawner = spawnerGO.AddComponent<CarSpawner>();
         spawner.carPrefabs = LoadPrefabs();
         spawner.entries = entries.ToArray();
-        spawner.maxCars = 22;        // por debajo de saturación -> se ve la onda verde, no gridlock
+        spawner.maxCars = 26;        // un poco más alto: más tráfico transversal sin saturar Elizondo
         spawner.carSpeed = CarSpeed;
         spawner.carBraking = 28f;   // frenado firme para no pasarse del alto a mayor velocidad
         spawner.carAccel = 12f;
@@ -511,8 +516,9 @@ public static class CorridorBuilder
                 if (OverlapsRoad(jx, jz, 4f)) continue;
                 // Reservar TODA la cuadra del campus del Tec (entre Garza Sada y Junco, lado norte)
                 if (jx > -122f && jx < -8f && jz > 12f && jz < 160f) continue;
-                // Reservar la cuadra del teatro + parque (DEBAJO de la escuela, lado sur)
-                if (jx > -120f && jx < -6f && jz < -16f && jz > -110f) continue;
+                // Reservar la cuadra del teatro + parque (DEBAJO de la escuela, lado sur).
+                // Footprint corrido a la derecha -> el resto del sur (izquierda) se rellena con edificios.
+                if (jx > -83f && jx < 23f && jz < -16f && jz > -108f) continue;
                 if (rng.NextDouble() < 0.25) continue;
 
                 float w = 5f + (float)rng.NextDouble() * 4f;
@@ -578,12 +584,12 @@ public static class CorridorBuilder
 
     private static void BuildTheater(Transform parent)
     {
-        // Todo el teatro de un mismo color café.
-        Material mt = GetOrCreateMat("Mat_Teatro", new Color32(0x6b, 0x47, 0x2e, 0xFF));
+        // Todo el teatro de un mismo color café OSCURO (material nuevo para que tome el color).
+        Material mt = GetOrCreateMat("Mat_TeatroOscuro", new Color32(0x3e, 0x28, 0x17, 0xFF));
 
         GameObject g = new GameObject("Teatro");
         g.transform.SetParent(parent, false);
-        float tx = -24f, tz = -52f;   // un poco más a la derecha, debajo de la escuela
+        float tx = 4f, tz = -52f;   // más a la derecha (debajo de Junco / borde derecho de la escuela)
 
         Cube("Teatro_Sala",    new Vector3(tx, 11f, tz - 6f),  new Vector3(32f, 22f, 30f), mt, g.transform);   // bloque grande
         Cube("Teatro_Techo",   new Vector3(tx, 22.6f, tz - 6f), new Vector3(34f, 1.6f, 32f), mt, g.transform); // cornisa
@@ -598,7 +604,7 @@ public static class CorridorBuilder
 
         GameObject g = new GameObject("Parque");
         g.transform.SetParent(parent, false);
-        float px = -86f, pz = -62f;       // a la izquierda del teatro, extendido hacia atrás (sur)
+        float px = -48f, pz = -62f;       // recorrido a la derecha: pegado al costado izquierdo del teatro
         float pw = 66f, pd = 84f;
 
         Cube("Parque_Cesped",  new Vector3(px, -0.05f, pz), new Vector3(pw, 0.1f, pd), mp, g.transform);
@@ -668,7 +674,23 @@ public static class CorridorBuilder
         hL.transform.localRotation = Quaternion.Euler(0f, -50f, 0f);
     }
 
-    private static void BuildCrosswalk(string name, Vector3 center, bool horizontal, Material matLinea, Transform parent)
+    /// <summary>
+    /// Cruce peatonal (cebra) completo alrededor de una intersección.
+    ///   - 2 cruces sobre Av. Elizondo (lado este y oeste).
+    ///   - 1 cruce sobre el brazo norte de la calle transversal.
+    ///   - 1 cruce sur extra solo en cruces en cruz (no en la T de Junco).
+    /// </summary>
+    private static void BuildCrosswalkBox(string name, float cx, bool isT, float crossWidth, Material matLinea, Transform parent)
+    {
+        float d = HalfInter + 2f;
+        BuildCrosswalk(name + "_PE", new Vector3(cx + d, -0.03f, 0f), true, RoadWidth - 1f, matLinea, parent); // este
+        BuildCrosswalk(name + "_PW", new Vector3(cx - d, -0.03f, 0f), true, RoadWidth - 1f, matLinea, parent); // oeste
+        BuildCrosswalk(name + "_PN", new Vector3(cx, -0.03f,  d), false, crossWidth - 1f, matLinea, parent);   // norte
+        if (!isT)
+            BuildCrosswalk(name + "_PS", new Vector3(cx, -0.03f, -d), false, crossWidth - 1f, matLinea, parent); // sur
+    }
+
+    private static void BuildCrosswalk(string name, Vector3 center, bool horizontal, float span, Material matLinea, Transform parent)
     {
         GameObject group = new GameObject(name + "_CrucePeatonal");
         group.transform.SetParent(parent, false);
@@ -676,7 +698,6 @@ public static class CorridorBuilder
 
         int stripeCount = 7;
         float stripeWidth = 0.7f;
-        float span = 13f;
         float gap = (span - stripeCount * stripeWidth) / (stripeCount - 1);
         float start = -span * 0.5f + stripeWidth * 0.5f;
 
