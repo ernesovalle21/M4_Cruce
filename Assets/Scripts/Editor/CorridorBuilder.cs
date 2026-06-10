@@ -122,7 +122,7 @@ public static class CorridorBuilder
         Material matAmarillo = GetOrCreateMat("Mat_Amarillo",      new Color32(0xFF, 0xCC, 0x00, 0xFF));
         Material matRojo     = GetOrCreateMat("Mat_Rojo",          new Color32(0xCC, 0x22, 0x00, 0xFF));
         Material matBanqueta = GetOrCreateMat("Mat_Banqueta",      new Color32(0xB0, 0xB0, 0xB0, 0xFF));
-        Material matPasto    = GetOrCreateMat("Mat_Pasto",         new Color32(0x4C, 0x8C, 0x3F, 0xFF));
+        Material matSuelo    = GetOrCreateMat("Mat_Suelo",         new Color32(0x6E, 0x70, 0x73, 0xFF)); // suelo urbano (gris ciudad)
         Material matFocoOff  = GetOrCreateMat("Mat_FocoApagado",   new Color32(0x20, 0x20, 0x20, 0xFF));
         Material[] matEdificios =
         {
@@ -159,7 +159,7 @@ public static class CorridorBuilder
         float jcFeederZ = 2.2f;    // carril NORTE de Jesús Cantú: sigue el flujo (entra a Elizondo)
                                     // el carril SUR (-jcFeederZ) es el sentido CONTRARIO
 
-        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 180f, 0.1f, 350f), matPasto, R);
+        Cube("Suelo", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 180f, 0.1f, 350f), matSuelo, R);
         Cube("Elizondo_Road",  new Vector3(elizCx,  -0.05f, 0f), new Vector3(elizLen,  0.1f, RoadWidth), matAsfalto, R);
         Cube("JesusCantu_Road", new Vector3(jcRoadCx, -0.05f, 0f), new Vector3(jcRoadLen, 0.1f, JCWidth), matAsfalto, R);
 
@@ -620,7 +620,7 @@ public static class CorridorBuilder
                 if (jx > -122f && jx < -8f && jz > 12f && jz < 160f) continue;
                 // Reservar la cuadra del teatro + parque (DEBAJO de la escuela, lado sur).
                 // Footprint corrido a la derecha -> el resto del sur (izquierda) se rellena con edificios.
-                if (jx > -83f && jx < 23f && jz < -16f && jz > -108f) continue;
+                if (jx > -84f && jx < 27f && jz < -16f && jz > -110f) continue;
                 if (rng.NextDouble() < 0.25) continue;
 
                 float w = 5f + (float)rng.NextDouble() * 4f;
@@ -651,52 +651,90 @@ public static class CorridorBuilder
 
     private static void BuildCampus(Transform parent)
     {
-        Material matCampus = GetOrCreateMat("Mat_Campus", new Color32(0x53, 0x68, 0x8f, 0xFF));      // azul-gris institucional
-        Material matQuad   = GetOrCreateMat("Mat_CampusVerde", new Color32(0x3f, 0x7a, 0x3a, 0xFF)); // explanada verde
+        // Campus Tec = "jardín con edificios" (edificios alargados y paralelos en áreas
+        // verdes). El edificio icónico es la RECTORÍA (antigua Biblioteca, 1952), con un
+        // MURAL en su fachada (de González Camarena).
+        Material matCampus = GetOrCreateMat("Mat_Campus", new Color32(0x53, 0x68, 0x8f, 0xFF));      // institucional
+        Material matQuad   = GetOrCreateMat("Mat_CampusVerde", new Color32(0x3f, 0x7a, 0x3a, 0xFF)); // jardín verde
+        Material matTecAzul = GetOrCreateMat("Mat_TecAzul", new Color32(0x00, 0x3D, 0x6B, 0xFF));    // azul Tec
+        Material matMural   = GetOrCreateMat("Mat_TecMural", new Color32(0xC0, 0x55, 0x2E, 0xFF));   // mural (terracota)
+        Material matCamino  = GetOrCreateMat("Mat_Camino", new Color32(0xc9, 0xbf, 0xa6, 0xFF));     // andadores
+        Material matPoste   = GetOrCreateMat("Mat_Semaforo_Caja", new Color32(0x11, 0x11, 0x11, 0xFF));
 
         GameObject g = new GameObject("Campus_Tec");
         g.transform.SetParent(parent, false);
 
-        // Explanada/quad verde del campus (cubre toda la cuadra hacia el fondo)
+        // Jardín del campus (verde) + andadores que lo cruzan
         Cube("Campus_Quad", new Vector3(-65f, -0.06f, 80f), new Vector3(112f, 0.08f, 130f), matQuad, g.transform);
+        Cube("Campus_AndadorV", new Vector3(-62f, -0.04f, 80f), new Vector3(4f, 0.02f, 130f), matCamino, g.transform);
+        Cube("Campus_AndadorH", new Vector3(-65f, -0.04f, 48f), new Vector3(112f, 0.02f, 4f), matCamino, g.transform);
 
-        // Bloques del campus: varios cubos UNIDOS para que se vean más grandes.
-        // (centroX, centroZ, ancho, profundidad, altura)
+        // Edificios alargados y paralelos (fachadas largas norte-sur), como el campus real
         var bloques = new (float x, float z, float w, float d, float h)[]
         {
-            (-98f, 30f, 32f, 18f, 11f),   // bloque grande (varios unidos)
-            (-58f, 30f, 30f, 18f, 13f),   // bloque grande
-            (-24f, 30f, 16f, 18f, 9f),
-            (-100f, 64f, 16f, 20f, 10f),
-            (-58f, 64f, 36f, 20f, 12f),   // bloque grande (3 unidos)
-            (-22f, 64f, 16f, 20f, 9f),
-            (-84f, 100f, 30f, 22f, 14f),  // grande
-            (-42f, 100f, 30f, 22f, 12f),  // grande
-            (-62f, 134f, 42f, 18f, 11f),  // fila grande unida
+            (-98f, 30f, 34f, 14f, 11f),
+            (-58f, 30f, 32f, 14f, 12f),
+            (-22f, 30f, 16f, 14f, 9f),
+            (-100f, 66f, 16f, 16f, 10f),
+            (-58f, 66f, 40f, 16f, 12f),
+            (-20f, 66f, 16f, 16f, 9f),
+            (-86f, 102f, 32f, 18f, 14f),
+            (-40f, 102f, 32f, 18f, 12f),
         };
         for (int i = 0; i < bloques.Length; i++)
         {
             var b = bloques[i];
             Cube($"Campus_Bloque_{i}", new Vector3(b.x, b.h * 0.5f, b.z), new Vector3(b.w, b.h, b.d), matCampus, g.transform);
+            // franja azul Tec en la parte alta (acento de marca)
+            Cube($"Campus_Franja_{i}", new Vector3(b.x, b.h - 1.2f, b.z - b.d * 0.5f - 0.2f),
+                 new Vector3(b.w + 0.2f, 2.0f, 0.3f), matTecAzul, g.transform);
         }
 
-        // Edificio principal (la escuela), grande, al fondo de la cuadra
-        Cube("Campus_Principal", new Vector3(-62f, 9.5f, 152f), new Vector3(60f, 19f, 16f), matCampus, g.transform);
+        // RECTORÍA (edificio icónico) al fondo, con MURAL en la fachada sur (hacia la cámara)
+        float rz = 138f;
+        Cube("Campus_Rectoria", new Vector3(-62f, 12f, rz), new Vector3(66f, 24f, 18f), matCampus, g.transform);
+        Cube("Campus_Rectoria_Base", new Vector3(-62f, 1.5f, rz - 11f), new Vector3(70f, 3f, 6f), matCampus, g.transform);
+        Cube("Campus_Rectoria_Mural", new Vector3(-62f, 13f, rz - 9.3f), new Vector3(50f, 16f, 0.5f), matMural, g.transform);
+        Cube("Campus_Rectoria_MuralMarco", new Vector3(-62f, 13f, rz - 9.15f), new Vector3(52f, 18f, 0.2f), matTecAzul, g.transform);
+
+        // Letrero "TEC DE MONTERREY" al frente del campus (hacia la cámara)
+        BuildSign("TEC DE MONTERREY", new Vector3(-62f, 0f, 14f), matPoste, matTecAzul, g.transform);
     }
 
     private static void BuildTheater(Transform parent)
     {
-        // Todo el teatro de un mismo color café OSCURO (material nuevo para que tome el color).
-        Material mt = GetOrCreateMat("Mat_TeatroOscuro", new Color32(0x3e, 0x28, 0x17, 0xFF));
+        // Auditorio Luis Elizondo (1980): auditorio grande con TORRE ESCÉNICA, MARQUESINA
+        // de acceso, una PLAZA al frente y una FACHADA DIGITAL LED ("laberinto digital").
+        Material mt     = GetOrCreateMat("Mat_TeatroOscuro", new Color32(0x3e, 0x28, 0x17, 0xFF)); // cuerpo café
+        Material mled   = GetOrCreateMat("Mat_TeatroLed",    new Color32(0x29, 0xA8, 0xD8, 0xFF)); // fachada digital (cian)
+        Material mplaza = GetOrCreateMat("Mat_Plaza",        new Color32(0xB8, 0xB4, 0xAB, 0xFF)); // plaza / marquesina (claro)
+        Material mpost  = GetOrCreateMat("Mat_Semaforo_Caja", new Color32(0x11, 0x11, 0x11, 0xFF));
 
         GameObject g = new GameObject("Teatro");
         g.transform.SetParent(parent, false);
-        float tx = 4f, tz = -52f;   // más a la derecha (debajo de Junco / borde derecho de la escuela)
+        float tx = 4f, tz = -52f;
+        float frontZ = tz - 13f;   // cara SUR (hacia la cámara) = frente del teatro
 
-        Cube("Teatro_Sala",    new Vector3(tx, 11f, tz - 6f),  new Vector3(32f, 22f, 30f), mt, g.transform);   // bloque grande
-        Cube("Teatro_Techo",   new Vector3(tx, 22.6f, tz - 6f), new Vector3(34f, 1.6f, 32f), mt, g.transform); // cornisa
-        Cube("Teatro_Fachada", new Vector3(tx, 6f, tz + 11f),  new Vector3(34f, 12f, 8f), mt, g.transform);    // frente
-        Cube("Teatro_Escalones", new Vector3(tx, 0.4f, tz + 16f), new Vector3(30f, 0.8f, 4f), mt, g.transform);
+        // Sala (auditorio) + torre escénica (más alta, atrás hacia la calle) + cornisa
+        Cube("Teatro_Sala", new Vector3(tx, 10f, tz), new Vector3(34f, 20f, 26f), mt, g.transform);
+        Cube("Teatro_TorreEscenica", new Vector3(tx, 17f, tz + 8f), new Vector3(20f, 34f, 12f), mt, g.transform);
+        Cube("Teatro_Cornisa", new Vector3(tx, 20.4f, tz), new Vector3(36f, 1.2f, 28f), mt, g.transform);
+
+        // Fachada al frente con FACHADA DIGITAL LED (panel cian con rejilla = laberinto digital)
+        Cube("Teatro_Fachada", new Vector3(tx, 7.5f, frontZ), new Vector3(34f, 15f, 3f), mt, g.transform);
+        Cube("Teatro_FachadaLED", new Vector3(tx, 9f, frontZ - 1.7f), new Vector3(28f, 11f, 0.4f), mled, g.transform);
+        for (int i = -2; i <= 2; i++)
+            Cube($"Teatro_LED_{i}", new Vector3(tx, 9f + i * 2.2f, frontZ - 1.95f), new Vector3(28f, 0.22f, 0.2f), mt, g.transform);
+
+        // Marquesina (volado) + columnas + plaza al frente (gris) + escalones
+        Cube("Teatro_Marquesina", new Vector3(tx, 5.6f, frontZ - 4.5f), new Vector3(38f, 0.7f, 8f), mplaza, g.transform);
+        Cube("Teatro_Col1", new Vector3(tx - 16f, 2.7f, frontZ - 7.5f), new Vector3(0.9f, 5.4f, 0.9f), mplaza, g.transform);
+        Cube("Teatro_Col2", new Vector3(tx + 16f, 2.7f, frontZ - 7.5f), new Vector3(0.9f, 5.4f, 0.9f), mplaza, g.transform);
+        Cube("Teatro_Plaza", new Vector3(tx, -0.04f, frontZ - 13f), new Vector3(42f, 0.06f, 20f), mplaza, g.transform);
+        Cube("Teatro_Escalones", new Vector3(tx, 0.5f, frontZ - 3.5f), new Vector3(34f, 1f, 3f), mplaza, g.transform);
+
+        // Letrero "TEATRO LUIS ELIZONDO" al frente (hacia la cámara)
+        BuildSign("TEATRO LUIS ELIZONDO", new Vector3(tx, 0f, frontZ - 8f), mpost, mt, g.transform);
     }
 
     private static void BuildPark(Transform parent, Material tronco, Material hojas)
