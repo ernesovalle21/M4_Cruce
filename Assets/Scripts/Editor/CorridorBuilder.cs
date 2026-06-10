@@ -489,6 +489,8 @@ public static class CorridorBuilder
                 if (OverlapsRoad(jx, jz, 4f)) continue;
                 // Reservar TODA la cuadra del campus del Tec (entre Garza Sada y Junco, lado norte)
                 if (jx > -122f && jx < -8f && jz > 12f && jz < 160f) continue;
+                // Reservar la cuadra del teatro + parque (entre Junco y García Roel, lado sur)
+                if (jx > 8f && jx < 92f && jz < -22f && jz > -72f) continue;
                 if (rng.NextDouble() < 0.25) continue;
 
                 float w = 5f + (float)rng.NextDouble() * 4f;
@@ -501,6 +503,10 @@ public static class CorridorBuilder
 
         // Campus del Tec entre Junco (x=0) y Garza Sada (x=-130)
         BuildCampus(S);
+
+        // Teatro y parque entre Junco (x=0) y García Roel (x=130), lado sur
+        BuildTheater(S);
+        BuildPark(S, tronco, hojas);
 
         for (float tx = RoadXMin + 6f; tx <= RoadXMax - 6f; tx += 9f)
         {
@@ -524,20 +530,61 @@ public static class CorridorBuilder
         // Explanada/quad verde del campus (cubre toda la cuadra hacia el fondo)
         Cube("Campus_Quad", new Vector3(-65f, -0.06f, 80f), new Vector3(112f, 0.08f, 130f), matQuad, g.transform);
 
-        // Edificios grandes del campus en varias filas (toda la cuadra)
-        float[] cxs = { -110f, -86f, -62f, -38f, -18f };
-        float[] czs = { 26f, 58f, 92f, 126f };
-        int i = 0;
-        foreach (float cz in czs)
-            foreach (float bx in cxs)
-            {
-                float h = 9f + ((i * 3) % 4) * 2f;
-                Cube($"Campus_Edif_{i}", new Vector3(bx, h * 0.5f, cz), new Vector3(15f, h, 18f), matCampus, g.transform);
-                i++;
-            }
+        // Bloques del campus: varios cubos UNIDOS para que se vean más grandes.
+        // (centroX, centroZ, ancho, profundidad, altura)
+        var bloques = new (float x, float z, float w, float d, float h)[]
+        {
+            (-98f, 30f, 32f, 18f, 11f),   // bloque grande (varios unidos)
+            (-58f, 30f, 30f, 18f, 13f),   // bloque grande
+            (-24f, 30f, 16f, 18f, 9f),
+            (-100f, 64f, 16f, 20f, 10f),
+            (-58f, 64f, 36f, 20f, 12f),   // bloque grande (3 unidos)
+            (-22f, 64f, 16f, 20f, 9f),
+            (-84f, 100f, 30f, 22f, 14f),  // grande
+            (-42f, 100f, 30f, 22f, 12f),  // grande
+            (-62f, 134f, 42f, 18f, 11f),  // fila grande unida
+        };
+        for (int i = 0; i < bloques.Length; i++)
+        {
+            var b = bloques[i];
+            Cube($"Campus_Bloque_{i}", new Vector3(b.x, b.h * 0.5f, b.z), new Vector3(b.w, b.h, b.d), matCampus, g.transform);
+        }
 
-        // Edificio principal (la escuela) más grande, al fondo de la cuadra
+        // Edificio principal (la escuela), grande, al fondo de la cuadra
         Cube("Campus_Principal", new Vector3(-62f, 9.5f, 152f), new Vector3(60f, 19f, 16f), matCampus, g.transform);
+    }
+
+    private static void BuildTheater(Transform parent)
+    {
+        Material mt    = GetOrCreateMat("Mat_Teatro",     new Color32(0x8a, 0x3b, 0x33, 0xFF)); // fachada terracota
+        Material mtrim = GetOrCreateMat("Mat_TeatroTrim", new Color32(0xd8, 0xc8, 0xa0, 0xFF)); // detalles claros
+
+        GameObject g = new GameObject("Teatro");
+        g.transform.SetParent(parent, false);
+        float tx = 72f, tz = -46f;
+
+        Cube("Teatro_Sala",    new Vector3(tx, 8f, tz - 6f),  new Vector3(30f, 16f, 26f), mt, g.transform);     // sala principal
+        Cube("Teatro_Techo",   new Vector3(tx, 16.6f, tz - 6f), new Vector3(33f, 1.4f, 28f), mtrim, g.transform); // cornisa
+        Cube("Teatro_Fachada", new Vector3(tx, 5f, tz + 10f),  new Vector3(34f, 10f, 6f), mtrim, g.transform);  // pórtico
+        for (int k = 0; k < 4; k++)
+            Cube($"Teatro_Columna_{k}", new Vector3(tx - 13.5f + k * 9f, 4f, tz + 13f), new Vector3(1.6f, 8f, 1.6f), mtrim, g.transform);
+        Cube("Teatro_Escalones", new Vector3(tx, 0.3f, tz + 16f), new Vector3(30f, 0.6f, 4f), mtrim, g.transform);
+    }
+
+    private static void BuildPark(Transform parent, Material tronco, Material hojas)
+    {
+        Material mp    = GetOrCreateMat("Mat_Parque", new Color32(0x4f, 0x8a, 0x42, 0xFF)); // césped
+        Material mpath = GetOrCreateMat("Mat_Camino", new Color32(0xc9, 0xbf, 0xa6, 0xFF)); // andador
+
+        GameObject g = new GameObject("Parque");
+        g.transform.SetParent(parent, false);
+        float px = 30f, pz = -46f;
+
+        Cube("Parque_Cesped",   new Vector3(px, -0.05f, pz), new Vector3(40f, 0.1f, 40f), mp, g.transform);
+        Cube("Parque_CaminoH",  new Vector3(px, -0.04f, pz), new Vector3(40f, 0.02f, 3f), mpath, g.transform);
+        Cube("Parque_CaminoV",  new Vector3(px, -0.04f, pz), new Vector3(3f, 0.02f, 40f), mpath, g.transform);
+        foreach (var off in new (float dx, float dz)[] { (-13f, -13f), (13f, -13f), (-13f, 13f), (13f, 13f), (-15f, 0f), (15f, 0f) })
+            BuildTree(new Vector3(px + off.dx, 0f, pz + off.dz), tronco, hojas, g.transform);
     }
 
     private static void BuildTree(Vector3 pos, Material tronco, Material hojas, Transform parent)
