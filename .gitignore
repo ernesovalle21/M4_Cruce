@@ -73,3 +73,6 @@ Thumbs.db
 
 # Salidas de métricas en tiempo de ejecución
 Analisis/metrics_*.csv
+
+# Figuras generadas por los notebooks
+Analisis/figs/

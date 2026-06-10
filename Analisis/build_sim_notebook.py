@@ -38,6 +38,14 @@ class VehicleAgent(ap.Agent):
         self.vid = self.model.next_id
         self.model.next_id += 1
         self.wait = 0
+        # Origen-destino: con prob turn_prob el carro gira (su destino es una
+        # intersección); si no, cruza todo el corredor.
+        tp = getattr(self.p, 'turn_prob', 0.0)
+        opciones = [x for x in self.model.p.xs if x > self.x]
+        if tp > 0.0 and opciones and np.random.rand() < tp:
+            self.dest = float(np.random.choice(opciones))
+        else:
+            self.dest = float(self.p.x_exit)
 
 class CorridorModel(ap.Model):
     def setup(self):
@@ -48,6 +56,7 @@ class CorridorModel(ap.Model):
         self.vehicles = []
         self.next_id = 0
         self.exited = 0
+        self.turned = 0
         self.total_wait = 0
         self.travel = []
         self.queue_hist = []   # carros detenidos por paso
@@ -80,14 +89,18 @@ class CorridorModel(ap.Model):
             prev_x = veh.x
             self.traj.append((self.t, veh.x, veh.vid))
         self.queue_hist.append(stopped)
-        # 4) salidas
-        for v in [v for v in self.vehicles if v.x >= self.p.x_exit]:
-            self.exited += 1; self.travel.append(self.t - v.t0)
-        self.vehicles = [v for v in self.vehicles if v.x < self.p.x_exit]
+        # 4) salidas / giros (origen-destino)
+        for v in [v for v in self.vehicles if v.x >= v.dest]:
+            if v.dest >= self.p.x_exit:
+                self.exited += 1; self.travel.append(self.t - v.t0)
+            else:
+                self.turned += 1
+        self.vehicles = [v for v in self.vehicles if v.x < v.dest]
         self.exit_hist.append(self.exited)
 
     def end(self):
         self.report('exited', self.exited)
+        self.report('turned', self.turned)
         self.report('avg_wait', self.total_wait / max(1, self.exited))
         self.report('avg_travel', float(np.mean(self.travel)) if self.travel else 0.0)
         self.report('avg_queue', float(np.mean(self.queue_hist)) if self.queue_hist else 0.0)
@@ -147,7 +160,7 @@ cells.append(code(
 "\n"
 "base = dict(C=C, green=green, yellow=yellow, speed=v,\n"
 "            x_entry=-60, x_exit=905, min_gap=7, stop_margin=5,\n"
-"            arrival_rate=0.5, steps=400, seed=42)\n"
+"            arrival_rate=0.5, steps=400, seed=42, turn_prob=0.0)\n"
 "print('Offsets coordinados:', [round(o,1) for o in offsets_coord])"
 ))
 
@@ -251,7 +264,110 @@ cells.append(code(
 ))
 
 cells.append(md(
-"## 7. Conclusiones",
+"## 7. Coordinación DISTRIBUIDA por comunicación entre semáforos",
+"",
+"Aquí los offsets **no se precalculan**: cada semáforo-agente, al ponerse en verde,",
+"**le envía un mensaje** a su vecino de aguas abajo indicándole cuándo llegará el",
+"pelotón; el vecino programa su verde con esa información. La **onda verde emerge",
+"de la comunicación** entre agentes (coordinación distribuida).",
+"",
+"Esto cubre explícitamente el requisito de que los agentes *se comuniquen, compartan",
+"estados y coordinen decisiones*."
+))
+
+cells.append(code(
+"class CommLight(ap.Agent):\n"
+"    def setup(self):\n"
+"        self.pos_x = 0.0; self.state = 'red'; self.timer = 0.0; self.queue = 0\n"
+"        self.downstream = None; self.pending_green_at = None\n"
+"        self.msgs_sent = 0; self.is_first = False\n"
+"    def sense(self):\n"
+"        self.queue = sum(1 for v in self.model.vehicles if 0 < (self.pos_x - v.x) <= 35)\n"
+"    def on_green(self, t):\n"
+"        # COMUNICACIÓN: avisa al vecino cuándo llegará el pelotón\n"
+"        if self.downstream is not None:\n"
+"            travel = (self.downstream.pos_x - self.pos_x) / self.p.speed\n"
+"            self.downstream.pending_green_at = t + travel\n"
+"            self.msgs_sent += 1\n"
+"    def step_light(self, t):\n"
+"        p = self.p\n"
+"        if self.state == 'green':\n"
+"            self.timer += 1\n"
+"            if self.timer >= p.green: self.state = 'red'; self.timer = 0\n"
+"        else:\n"
+"            self.timer += 1\n"
+"            ready = self.timer >= p.min_red\n"
+"            if self.is_first and self.timer >= p.first_red:\n"
+"                self.state = 'green'; self.timer = 0; self.on_green(t)\n"
+"            elif (self.pending_green_at is not None) and (t >= self.pending_green_at) and ready:\n"
+"                self.state = 'green'; self.timer = 0; self.pending_green_at = None; self.on_green(t)\n"
+"\n"
+"class CommModel(ap.Model):\n"
+"    def setup(self):\n"
+"        self.lights = ap.AgentList(self, len(self.p.xs), CommLight)\n"
+"        for L, x in zip(self.lights, self.p.xs): L.pos_x = float(x)\n"
+"        for i in range(len(self.lights) - 1): self.lights[i].downstream = self.lights[i+1]\n"
+"        self.lights[0].is_first = True; self.lights[0].state = 'green'\n"
+"        self.next_id = 0\n"
+"        self.vehicles = []; self.total_wait = 0; self.exited = 0; self.travel = []\n"
+"    def step(self):\n"
+"        for L in self.lights: L.sense()\n"
+"        for L in self.lights: L.step_light(self.t)\n"
+"        if np.random.rand() < self.p.arrival_rate:\n"
+"            self.vehicles.append(ap.AgentList(self, 1, VehicleAgent)[0])\n"
+"        prev = None\n"
+"        for v in sorted(self.vehicles, key=lambda a: a.x, reverse=True):\n"
+"            tgt = v.x + self.p.speed\n"
+"            if prev is not None: tgt = min(tgt, prev - self.p.min_gap)\n"
+"            for L in self.lights:\n"
+"                if L.pos_x > v.x:\n"
+"                    if L.state != 'green': tgt = min(tgt, L.pos_x - self.p.stop_margin)\n"
+"                    break\n"
+"            nx = max(tgt, v.x)\n"
+"            if nx - v.x < 0.1: self.total_wait += 1\n"
+"            v.x = nx; prev = v.x\n"
+"        for v in [v for v in self.vehicles if v.x >= self.p.x_exit]:\n"
+"            self.exited += 1; self.travel.append(self.t - v.t0)\n"
+"        self.vehicles = [v for v in self.vehicles if v.x < self.p.x_exit]\n"
+"    def end(self):\n"
+"        self.report('exited', self.exited)\n"
+"        self.report('avg_wait', self.total_wait / max(1, self.exited))\n"
+"        self.report('mensajes', sum(L.msgs_sent for L in self.lights))\n"
+"\n"
+"pc = dict(base); pc['xs'] = xs\n"
+"pc['green'] = 45; pc['min_red'] = 10; pc['first_red'] = 18\n"
+"mc = CommModel(pc); mc.run(display=False)\n"
+"print(f\"Coordinación por comunicación -> salieron={mc.reporters['exited']:.0f}, \"\n"
+"      f\"espera={mc.reporters['avg_wait']:.1f}s, mensajes intercambiados={mc.reporters['mensajes']:.0f}\")\n"
+"print('Los offsets EMERGEN de los mensajes entre semáforos (no se precalculan).')"
+))
+
+cells.append(md(
+"## 8. Origen–destino (giros con probabilidad)",
+"",
+"No todos los carros cruzan el corredor completo: con probabilidad `turn_prob`",
+"cada vehículo **gira en una intersección** (su destino es ese cruce), modelando",
+"**relaciones origen–destino**. El resto cruza de extremo a extremo."
+))
+
+cells.append(code(
+"po = dict(base); po['xs'] = xs; po['offsets'] = offsets_coord; po['turn_prob'] = 0.35\n"
+"mo = CorridorModel(po); mo.run(display=False)\n"
+"cruzaron = int(mo.reporters['exited']); giraron = int(mo.reporters['turned'])\n"
+"total = max(1, cruzaron + giraron)\n"
+"print(f'Con origen-destino (turn_prob=0.35):')\n"
+"print(f'  - {cruzaron} cruzaron todo el corredor ({cruzaron/total:.0%})')\n"
+"print(f'  - {giraron} giraron en una intersección ({giraron/total:.0%})')\n"
+"\n"
+"plt.figure(figsize=(6, 4))\n"
+"plt.bar(['Cruzan todo', 'Giran en cruce'], [cruzaron, giraron], color=['steelblue', 'orange'])\n"
+"plt.title('Distribución origen-destino de los vehículos')\n"
+"plt.ylabel('vehículos'); plt.grid(True, axis='y', ls='--', alpha=0.4)\n"
+"plt.tight_layout(); plt.show()"
+))
+
+cells.append(md(
+"## 9. Conclusiones",
 "",
 "- Con la **coordinación (onda verde)** los vehículos cruzan los 3 semáforos con",
 "  mucha menos espera y cola que **sin coordinar**, como se ve en el diagrama",

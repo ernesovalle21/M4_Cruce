@@ -26,7 +26,9 @@ Corredor: **Av. Luis Elizondo** (Distrito Tec) — 3 cruces: García Roel · Jun
 | Vehículos como agentes | ✅ Unity (`WaypointMover`, `CarCollision`, `YieldGate`) y Python (`VehicleAgent`) |
 | Semáforos como agentes | ✅ Unity (`TrafficLight`, `IntersectionController`) y Python (`TrafficLightAgent`) |
 | Info local (cola, fase, ocupación) | ✅ por intersección (`StopLineTrigger.WaitingCount`, controlador actuado) |
-| Agentes que **se comunican / comparten estados** | ⚠️ PARCIAL: coordinan por offsets + reloj común + actuación local; **no hay paso de mensajes explícito** entre cruces |
+| Agentes que **se comunican / comparten estados** | ✅ AgentPy §7: cada semáforo envía mensaje al vecino aguas abajo (offset emerge de la comunicación). También coordinación por offsets en Unity. |
+| Origen–destino (giros) | ✅ AgentPy §8: vehículos con destino en una intersección (turn_prob) |
+| Figuras exportadas para el reporte | ✅ `OndaVerde_Elizondo.ipynb` guarda PNG en `Analisis/figs/` |
 
 ---
 
