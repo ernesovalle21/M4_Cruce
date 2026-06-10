@@ -1,10 +1,9 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Semáforo determinista: la fase se calcula directamente desde el reloj global
-/// (Time.time) más un desfase (startOffset). Esto garantiza que varios semáforos
-/// queden coordinados en "onda verde" sin estados internos que se desincronicen.
+/// Semáforo determinista: la fase se calcula desde el reloj global (Time.time)
+/// más un desfase (startOffset), para coordinar la onda verde / contrafase.
+/// La detención de los carros la maneja StopLineTrigger leyendo CurrentPhase.
 /// </summary>
 public class TrafficLight : MonoBehaviour
 {
@@ -20,7 +19,7 @@ public class TrafficLight : MonoBehaviour
     public float startOffset = 0f;
 
     [Header("Visual")]
-    public Renderer lampRenderer;        // indicador único (opcional / compatibilidad)
+    public Renderer lampRenderer;        // indicador único (opcional)
     public Material matGreen;
     public Material matYellow;
     public Material matRed;
@@ -29,15 +28,14 @@ public class TrafficLight : MonoBehaviour
     public Renderer redLamp;
     public Renderer yellowLamp;
     public Renderer greenLamp;
-    public Material lampOff;              // material gris oscuro para focos apagados
+    public Material lampOff;
 
-    [Header("Compatibilidad (no usados por el modelo determinista)")]
-    public Phase startPhase = Phase.Green;   // conservado por compatibilidad con builders previos
-    public TrafficLight partnerLight;        // conservado por compatibilidad con builders previos
+    [Header("Compatibilidad")]
+    public Phase startPhase = Phase.Green;
+    public TrafficLight partnerLight;
 
     private Phase currentPhase = Phase.Red;
     private bool initialized = false;
-    private readonly List<WaypointMover> carsAtLine = new List<WaypointMover>();
 
     public Phase CurrentPhase => currentPhase;
     public float CycleTime => greenDuration + yellowDuration + redDuration;
@@ -50,7 +48,6 @@ public class TrafficLight : MonoBehaviour
             initialized = true;
             currentPhase = p;
             ApplyMaterial();
-            UpdateCars();
         }
     }
 
@@ -64,34 +61,8 @@ public class TrafficLight : MonoBehaviour
         return Phase.Red;
     }
 
-    /// <summary>Aplica el estado actual a los carros detenidos en la línea de alto.</summary>
-    private void UpdateCars()
-    {
-        bool stop = (currentPhase == Phase.Red);
-        for (int i = carsAtLine.Count - 1; i >= 0; i--)
-        {
-            if (carsAtLine[i] == null) { carsAtLine.RemoveAt(i); continue; }
-            carsAtLine[i].SetStopped(stop);
-        }
-    }
-
-    public void RegisterCar(WaypointMover car)
-    {
-        if (car == null) return;
-        if (!carsAtLine.Contains(car)) carsAtLine.Add(car);
-        car.SetStopped(currentPhase == Phase.Red);
-    }
-
-    public void UnregisterCar(WaypointMover car)
-    {
-        if (car == null) return;
-        carsAtLine.Remove(car);
-        car.SetStopped(false);
-    }
-
     private void ApplyMaterial()
     {
-        // Modo 3 focos: enciende solo el activo, los demás apagados.
         if (redLamp != null || yellowLamp != null || greenLamp != null)
         {
             if (redLamp != null)    redLamp.material    = currentPhase == Phase.Red    ? matRed    : lampOff;
@@ -99,7 +70,6 @@ public class TrafficLight : MonoBehaviour
             if (greenLamp != null)  greenLamp.material  = currentPhase == Phase.Green  ? matGreen  : lampOff;
         }
 
-        // Indicador único (compatibilidad).
         if (lampRenderer != null)
         {
             Material m = currentPhase == Phase.Green ? matGreen
