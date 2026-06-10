@@ -271,10 +271,17 @@ cells.append(md(
 "## 6. Escenarios de demanda (mañana / mediodía / tarde)",
 "",
 "Mientras se obtienen los **datos reales** de volumen, se usan estimaciones (veh/h",
-"por acceso). La coordinación (offsets) no cambia, pero la demanda afecta colas y",
-"si la onda verde se **rompe** por saturación.",
+"por acceso) **justificadas con valores típicos de ingeniería de tráfico**:",
 "",
-"> Sustituir estos valores por los datos reales cuando estén disponibles."
+"- Capacidad de arteria urbana señalizada: **~1,100–1,580 veh/h por carril**.",
+"- Flujo óptimo (sin congestión): **< ~500 veh/h por carril**.",
+"- Relación día↔pico: una vía de ~10,000 veh/día → ~1,000 veh en la hora pico.",
+"",
+"Con base en eso se estiman ~300–370 veh/h por carril en Elizondo (3 carriles) en",
+"horas pico, valores realistas para una avenida urbana del Distrito Tec.",
+"",
+"> Sustituir por los **datos reales** del curso cuando estén disponibles.",
+"> Refs: Mike on Traffic; NACTO Design Hour; VTPI Speed vs Capacity."
 ))
 
 cells.append(code(

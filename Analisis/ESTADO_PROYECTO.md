@@ -73,6 +73,30 @@ AgentPy: la coordinación reduce la espera ~71%.
 
 ---
 
+## 5b. Reconciliación de escalas Unity ↔ Python (resuelve la inconsistencia #3)
+
+Los dos artefactos usan el **mismo método** de coordinación (`offset = distancia / velocidad`),
+pero a **escalas distintas a propósito**:
+
+| | Modelo de ingeniería (Python) | Visualización (Unity) |
+|---|---|---|
+| Distancias | reales: 345 m, 500 m | estilizadas (unidades de escena) |
+| Velocidad | 40 km/h (justificada) | velocidad de juego (estética) |
+| Ciclo | C = 66 s (45/3/18) | ciclo comprimido para demo |
+| Propósito | cálculo y validación de offsets, diagramas, ancho de banda | demo 3D observable |
+
+**Justificación:** el cuaderno de Python es el **modelo a escala real** (de él salen offsets,
+diagramas espacio–tiempo y métricas de ingeniería); Unity es la **representación visual**
+en tiempo comprimido para mostrar el comportamiento. Ambos aplican la misma fórmula de
+offsets, por lo que son **consistentes en método** aunque difieran en números absolutos.
+(Opción futura: poner Unity exactamente a escala real — cambia el ritmo de la demo.)
+
+Estado de las inconsistencias:
+- #2 datos reales → **estimaciones justificadas** con valores típicos de tráfico (ver notebook §6).
+- #3 escalas → **documentado/justificado** (este apartado).
+- #4 CSV viejos → **eliminados**.
+- #1 corrida sin-coordinar incompleta → **pendiente de re-correr** (operativo en Unity).
+
 ## 6. Lo que FALTA (en orden sugerido)
 
 1. **Re-correr "sin coordinar"** ~5 min y volver a generar las gráficas (celda 6b).
