@@ -36,7 +36,19 @@ python3 build_notebook.py
 | Ancho de banda sentido inverso | 21 s (32% del ciclo) |
 | Progresión en verde (ideal) | 100% ambos sentidos |
 
+## Resultados de la simulación (Unity)
+
+La sección "6b. Resultados" del notebook grafica los CSV que genera Unity y compara
+los dos modos. Flujo:
+
+1. En Unity: **M4Cruce > Construir Corredor (Limpio)** → Play ~2 min → al salir crea
+   `metrics_resumen_coordinado.csv` y `metrics_serie_coordinado.csv`.
+2. En Unity: **M4Cruce > Construir Corredor (SIN coordinar)** → Play ~2 min → crea
+   `metrics_resumen_sin_coordinar.csv` y `metrics_serie_sin_coordinar.csv`.
+3. Ejecutar la celda "6b" del notebook (los CSV ya quedan en `Analisis/`) para obtener
+   las gráficas de cola, throughput y espera (coordinado vs sin coordinar).
+
 ## Pendiente
 
 - Sustituir volúmenes estimados por los **datos reales** (mañana/mediodía/tarde).
-- Conectar con métricas de la simulación Unity (colas, tiempo de espera) — siguiente paso.
+- Redactar el reporte técnico con las figuras (offsets, espacio–tiempo, resultados).

@@ -292,6 +292,75 @@ cells.append(code(
 ))
 
 cells.append(md(
+"## 6b. Resultados de la simulación (Unity)",
+"",
+"Lee los CSV generados por la simulación multiagente en Unity",
+"(`metrics_serie_*.csv` y `metrics_resumen_*.csv`) y compara los dos modos:",
+"**coordinado** (onda verde actuada) vs **sin coordinar** (ciclo fijo).",
+"",
+"> En Colab: sube los 4 CSV a esta carpeta. En local: ya están en `Analisis/`.",
+"> Corre la simulación en ambos modos antes de ejecutar esta celda."
+))
+
+cells.append(code(
+"import os\n"
+"\n"
+"BASE = ''  # carpeta de los CSV (Colab: sube los archivos aquí)\n"
+"\n"
+"def _serie(label):\n"
+"    p = os.path.join(BASE, f'metrics_serie_{label}.csv')\n"
+"    return pd.read_csv(p) if os.path.exists(p) else None\n"
+"\n"
+"def _resumen(label):\n"
+"    p = os.path.join(BASE, f'metrics_resumen_{label}.csv')\n"
+"    if not os.path.exists(p): return None\n"
+"    out = {}\n"
+"    for line in open(p, encoding='utf-8'):\n"
+"        line = line.strip()\n"
+"        if line.startswith('interseccion'): break\n"
+"        if not line or line.startswith('metrica'): continue\n"
+"        a = line.split(',')\n"
+"        if len(a) >= 2:\n"
+"            try: out[a[0]] = float(a[1])\n"
+"            except ValueError: pass\n"
+"    return out\n"
+"\n"
+"sc, ss = _serie('coordinado'), _serie('sin_coordinar')\n"
+"rc, rs = _resumen('coordinado'), _resumen('sin_coordinar')\n"
+"\n"
+"if sc is None and ss is None:\n"
+"    print('Aún no hay CSV de Unity. Corre la simulación en modo Coordinado y SIN')\n"
+"    print('coordinar, y coloca los metrics_*.csv en esta carpeta; luego re-ejecuta.')\n"
+"else:\n"
+"    # 1) Cola vs tiempo\n"
+"    plt.figure(figsize=(11, 4))\n"
+"    if sc is not None: plt.plot(sc.t_s, sc.cola, color='green', label='Coordinado')\n"
+"    if ss is not None: plt.plot(ss.t_s, ss.cola, color='red', alpha=0.8, label='Sin coordinar')\n"
+"    plt.title('Longitud de cola en el tiempo'); plt.xlabel('t (s)'); plt.ylabel('carros en cola')\n"
+"    plt.legend(); plt.grid(True, ls='--', alpha=0.4); plt.tight_layout(); plt.show()\n"
+"\n"
+"    # 2) Carros completados (acumulado)\n"
+"    plt.figure(figsize=(11, 4))\n"
+"    if sc is not None: plt.plot(sc.t_s, sc.completados, color='green', label='Coordinado')\n"
+"    if ss is not None: plt.plot(ss.t_s, ss.completados, color='red', alpha=0.8, label='Sin coordinar')\n"
+"    plt.title('Carros que completan la ruta (acumulado)'); plt.xlabel('t (s)'); plt.ylabel('completados')\n"
+"    plt.legend(); plt.grid(True, ls='--', alpha=0.4); plt.tight_layout(); plt.show()\n"
+"\n"
+"    # 3) Barras de resumen\n"
+"    if rc and rs:\n"
+"        mets = ['espera_promedio_s', 'throughput_veh_min', 'cola_promedio']\n"
+"        etiquetas = ['Espera prom (s)', 'Throughput (veh/min)', 'Cola prom']\n"
+"        x = np.arange(len(mets)); w = 0.35\n"
+"        plt.figure(figsize=(9, 4))\n"
+"        plt.bar(x - w/2, [rc.get(m, 0) for m in mets], w, color='green', label='Coordinado')\n"
+"        plt.bar(x + w/2, [rs.get(m, 0) for m in mets], w, color='red', alpha=0.8, label='Sin coordinar')\n"
+"        plt.xticks(x, etiquetas); plt.title('Resumen: coordinado vs sin coordinar')\n"
+"        plt.legend(); plt.grid(True, axis='y', ls='--', alpha=0.4); plt.tight_layout(); plt.show()\n"
+"        print('Coordinado   :', rc)\n"
+"        print('Sin coordinar:', rs)"
+))
+
+cells.append(md(
 "## 7. Conclusiones preliminares (preguntas clave del reto)",
 "",
 "- **¿Es posible coordinar el corredor?** Sí: con v=40 km/h y C=66 s, los offsets",
