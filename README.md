@@ -97,6 +97,4 @@ Las métricas se exportan a `Analisis/metrics_*_{coordinado|sin_coordinar}.csv` 
 ## Pendientes (no técnicos)
 
 1. **Re-correr "SIN coordinar"** ~5 min en Unity para la comparación de métricas.
-2. **Reporte técnico** (9 secciones) — material y figuras ya disponibles.
-3. **Subir a GitHub** (este repo).
-4. **Presentación final.**
+
