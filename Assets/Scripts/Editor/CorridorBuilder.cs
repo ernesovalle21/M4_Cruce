@@ -43,7 +43,7 @@ public static class CorridorBuilder
     private const float Bz = RoadWidth * 0.5f + 2f;
 
     // Longitud de los brazos de las calles transversales (calles más largas)
-    private const float ArmLen = 170f;    // longitud de los brazos transversales (llenan el verde)
+    private const float ArmLen = 145f;    // longitud de los brazos transversales (calles verticales)
     private const float LeftWidth = 10f;  // calle izquierda (Garza Sada): angosta, 1 carril
 
     private struct Cross
@@ -106,7 +106,7 @@ public static class CorridorBuilder
         float roadCenterX = (RoadXMin + RoadXMax) * 0.5f;
         float roadLen = RoadXMax - RoadXMin;
 
-        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 180f, 0.1f, 400f), matPasto, R);
+        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 180f, 0.1f, 350f), matPasto, R);
         Cube("Elizondo_Road", new Vector3(roadCenterX, -0.05f, 0f), new Vector3(roadLen, 0.1f, RoadWidth), matAsfalto, R);
 
         // Banquetas segmentadas
@@ -261,7 +261,7 @@ public static class CorridorBuilder
                 const float zMerge = 0f;
                 var baja = new List<Transform>
                 {
-                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 165f), crossWpRoot),
+                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 140f), crossWpRoot),
                     Wp("Junco_Baja_1", new Vector3(-2.3f, 0f, 11f), crossWpRoot), // alto (semáforo)
                     Wp("Junco_Baja_2", new Vector3(-2.3f, 0f, 7f),  crossWpRoot),
                 };
@@ -286,7 +286,7 @@ public static class CorridorBuilder
                 var sube = new List<Transform>
                 {
                     Wp("Junco_Sube_0", new Vector3(2.3f, 0f, 12f), crossWpRoot),
-                    Wp("Junco_Sube_1", new Vector3(2.3f, 0f, 165f), crossWpRoot),
+                    Wp("Junco_Sube_1", new Vector3(2.3f, 0f, 140f), crossWpRoot),
                 };
                 entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 5f });
             }
@@ -402,7 +402,7 @@ public static class CorridorBuilder
 
         var rng = new System.Random(12345);
 
-        float[] zRows = { -25f, -52f, -82f, -115f, -150f, -170f, 25f, 52f, 82f, 115f, 150f, 170f };
+        float[] zRows = { -25f, -52f, -82f, -112f, -142f, 25f, 52f, 82f, 112f, 142f };
         for (float bx = RoadXMin + 4f; bx <= RoadXMax - 4f; bx += 13f)
         {
             foreach (float bz in zRows)
