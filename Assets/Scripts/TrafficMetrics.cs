@@ -16,6 +16,8 @@ public class TrafficMetrics : MonoBehaviour
 {
     public static TrafficMetrics Instance;
 
+    [Tooltip("Etiqueta de la corrida (p.ej. coordinado / sin_coordinar) para los CSV.")]
+    public string runLabel = "run";
     [Tooltip("Cada cuántos segundos se muestrea la cola.")]
     public float sampleInterval = 1f;
     [Tooltip("Cada cuántos segundos se exporta el CSV automáticamente.")]
@@ -164,11 +166,11 @@ public class TrafficMetrics : MonoBehaviour
             int mx = interQueueMax.TryGetValue(kv.Key, out var m) ? m : 0;
             sb.AppendLine($"{kv.Key},{avg.ToString("F2", ci)},{mx}");
         }
-        string resumen = System.IO.Path.Combine(dir, "metrics_resumen.csv");
+        string resumen = System.IO.Path.Combine(dir, $"metrics_resumen_{runLabel}.csv");
         System.IO.File.WriteAllText(resumen, sb.ToString());
 
         // Serie de tiempo
-        string serie = System.IO.Path.Combine(dir, "metrics_serie.csv");
+        string serie = System.IO.Path.Combine(dir, $"metrics_serie_{runLabel}.csv");
         System.IO.File.WriteAllText(serie, string.Join("\n", timeSeries));
 
         Debug.Log($"[TrafficMetrics] CSV exportado:\n  {resumen}\n  {serie}");

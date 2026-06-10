@@ -74,7 +74,12 @@ public static class CorridorBuilder
     private static float StopX(float x) => x - Dir * (HalfInter + 4f);
 
     [MenuItem("M4Cruce/Construir Corredor (Limpio)")]
-    public static void Build()
+    public static void Build() => BuildCorridor(true);
+
+    [MenuItem("M4Cruce/Construir Corredor (SIN coordinar)")]
+    public static void BuildSinCoordinar() => BuildCorridor(false);
+
+    private static void BuildCorridor(bool coordinated)
     {
         CleanPrevious();
         EnsureCarTag();
@@ -250,17 +255,31 @@ public static class CorridorBuilder
             Cube(c.name + "_AltoCross", new Vector3(c.x, -0.03f, crossStopZ), new Vector3(crossW, 0.01f, 0.9f), matLinea, G);
             StopLineTrigger crossStop = BuildStopLine(c.name + "_Cross", new Vector3(c.x, 0f, crossStopZ), new Vector3(crossW, 3f, 3f), tlCross, G);
 
-            // Control coordinado-actuado: Elizondo verde por defecto; la transversal
-            // toma su turno coordinado (onda verde) solo si hay demanda.
-            var ctrl = g.AddComponent<IntersectionController>();
-            ctrl.major = tlEliz;
-            ctrl.minor = tlCross;
-            ctrl.minorStop = crossStop;
-            ctrl.cycle = cycle;
-            ctrl.armOffset = Mathf.Repeat(offset + GreenDur, cycle);
-            ctrl.yellow = YellowDur;
-            ctrl.allRed = AllRed;
-            ctrl.minorGreen = CrossGreen;
+            if (coordinated)
+            {
+                // Control coordinado-actuado: Elizondo verde por defecto; la transversal
+                // toma su turno coordinado (onda verde) solo si hay demanda.
+                var ctrl = g.AddComponent<IntersectionController>();
+                ctrl.major = tlEliz;
+                ctrl.minor = tlCross;
+                ctrl.minorStop = crossStop;
+                ctrl.cycle = cycle;
+                ctrl.armOffset = Mathf.Repeat(offset + GreenDur, cycle);
+                ctrl.yellow = YellowDur;
+                ctrl.allRed = AllRed;
+                ctrl.minorGreen = CrossGreen;
+            }
+            else
+            {
+                // Baseline SIN coordinar: ciclo fijo e IGUAL en todos los cruces
+                // (offset 0), sin actuación -> no hay onda verde.
+                tlEliz.externalControl = false;
+                tlEliz.startOffset = 0f;
+                tlEliz.greenDuration = 15f; tlEliz.yellowDuration = 3f; tlEliz.redDuration = 12f;
+                tlCross.externalControl = false;
+                tlCross.startOffset = 18f;   // verde transversal durante el rojo de Elizondo
+                tlCross.greenDuration = 12f; tlCross.yellowDuration = 3f; tlCross.redDuration = 15f;
+            }
 
             // --- Tráfico transversal ---
             Transform crossWpRoot = new GameObject("WP_" + c.name).transform;
@@ -335,7 +354,8 @@ public static class CorridorBuilder
         // ---- Métricas (HUD + CSV) ----
         GameObject metricsGO = new GameObject("TrafficMetrics");
         metricsGO.transform.SetParent(R, false);
-        metricsGO.AddComponent<TrafficMetrics>();
+        var metrics = metricsGO.AddComponent<TrafficMetrics>();
+        metrics.runLabel = coordinated ? "coordinado" : "sin_coordinar";
 
         // ---- Cámara ----
         Camera cam = Camera.main;
@@ -351,10 +371,13 @@ public static class CorridorBuilder
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         AssetDatabase.SaveAssets();
 
+        string modo = coordinated ? "COORDINADO (onda verde actuada)" : "SIN COORDINAR (ciclo fijo, baseline)";
         EditorUtility.DisplayDialog("M4 Cruce — Corredor construido",
+            $"Modo: {modo}\n" +
             $"Av. Luis Elizondo ({(Dir < 0 ? "derecha->izquierda" : "izquierda->derecha")}), 3 carriles, tramo largo.\n" +
-            "Tráfico transversal en contrafase · Junco = T de doble sentido.\n\n" +
-            $"Ciclo: {cycle}s · Velocidad: {CarSpeed} u/s\n\nDale Play.", "OK");
+            "Junco = T de doble sentido.\n\n" +
+            $"Velocidad: {CarSpeed} u/s\n" +
+            $"Métricas -> Analisis/metrics_*_{(coordinated ? "coordinado" : "sin_coordinar")}.csv\n\nDale Play.", "OK");
     }
 
     // =====================================================================

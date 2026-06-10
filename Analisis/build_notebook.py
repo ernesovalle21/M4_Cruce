@@ -231,6 +231,43 @@ cells.append(code(
 ))
 
 cells.append(md(
+"## 5b. Comparación: con onda verde vs sin coordinar",
+"",
+"Se compara la estrategia **coordinada** (offsets calculados) contra un plan **sin",
+"coordinar** (todos los semáforos con offset 0, mismo ciclo). El **ancho de banda**",
+"evidencia el beneficio de la coordinación."
+))
+
+cells.append(code(
+"zeros = [0.0] * len(d)\n"
+"\n"
+"def progresion_pct(offsets, fwd=True):\n"
+"    start = 0 if fwd else len(d) - 1\n"
+"    t0 = offsets[start]\n"
+"    ok = 0\n"
+"    for i in range(len(d)):\n"
+"        arr = (t0 + abs(d[i] - d[start]) / v) % C\n"
+"        if ((arr - offsets[i]) % C) <= verde + 1e-9: ok += 1\n"
+"    return ok / len(d)\n"
+"\n"
+"comparacion = pd.DataFrame({\n"
+"    'estrategia':  ['Coordinado (onda verde)', 'Sin coordinar (offset 0)'],\n"
+"    'banda_fwd_s': [round(ancho_de_banda(of,  d, v, C, verde), 1),\n"
+"                    round(ancho_de_banda(zeros, d, v, C, verde), 1)],\n"
+"    'banda_rev_s': [round(ancho_de_banda(orv, d, v, C, verde), 1),\n"
+"                    round(ancho_de_banda(zeros, d, v, C, verde), 1)],\n"
+"})\n"
+"mejora = comparacion['banda_fwd_s'][0] / max(comparacion['banda_fwd_s'][1], 0.1)\n"
+"print(comparacion.to_string(index=False))\n"
+"print(f'\\nMejora de ancho de banda (sentido principal): x{mejora:.1f}')\n"
+"\n"
+"# Diagrama espacio-tiempo SIN coordinar (offsets 0) para contraste visual\n"
+"inter_sc = intersections.copy()\n"
+"inter_sc['offset_fwd'] = 0.0\n"
+"diagrama_espacio_tiempo(inter_sc, C, verde, v, sentido='fwd')"
+))
+
+cells.append(md(
 "## 6. Escenarios de demanda (mañana / mediodía / tarde)",
 "",
 "Mientras se obtienen los **datos reales** de volumen, se usan estimaciones (veh/h",
