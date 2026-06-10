@@ -27,10 +27,18 @@ public class IntersectionController : MonoBehaviour
     public float minMinorGreen = 1.5f; // verde mínimo antes de poder hacer gap-out
     public float minMajorGreen = 4f;   // verde mínimo de Elizondo antes de poder ceder
 
+    [Header("Extensión de verde por cola alta (heurística J)")]
+    [Tooltip("El semáforo respeta la onda verde, pero si al momento de ceder hay una " +
+             "cola alta en Elizondo, EXTIENDE su verde unos segundos para vaciarla.")]
+    public int extendQueueThreshold = 3;   // # de carros en cola para extender
+    public float maxGreenExtension = 6f;   // segundos máximos de extensión
+
     private enum S { MajorGreen, MajorYellow, AllRed1, MinorGreen, MinorYellow, AllRed2 }
     private S state;
     private float t;
     private float lastArmPhase;
+    private bool extendArmed;     // ya llegó el instante coordinado de ceder
+    private float extendUsed;     // segundos de extensión consumidos
 
     void Start()
     {
@@ -60,7 +68,18 @@ public class IntersectionController : MonoBehaviour
                 bool minorDemanda = minorStop != null && minorStop.HasCars;
                 bool elizondoVacio = majorStop == null || !majorStop.HasCars;
                 if (t >= minMajorGreen && minorDemanda && (armTick || elizondoVacio))
-                    Go(S.MajorYellow, major, TrafficLight.Phase.Yellow);
+                    extendArmed = true;   // llegó el instante de ceder
+
+                if (extendArmed)
+                {
+                    // HEURÍSTICA (pizarra): si hay cola alta en Elizondo, extiende el
+                    // verde unos segundos para vaciarla antes de ceder.
+                    bool colaAlta = majorStop != null && majorStop.WaitingCount >= extendQueueThreshold;
+                    if (colaAlta && extendUsed < maxGreenExtension)
+                        extendUsed += Time.deltaTime;
+                    else
+                        Go(S.MajorYellow, major, TrafficLight.Phase.Yellow);
+                }
                 break;
 
             case S.MajorYellow:
@@ -91,6 +110,7 @@ public class IntersectionController : MonoBehaviour
     {
         state = next;
         t = 0f;
+        if (next == S.MajorGreen) { extendArmed = false; extendUsed = 0f; }
         if (tl != null) tl.SetPhase(p);
     }
 }
