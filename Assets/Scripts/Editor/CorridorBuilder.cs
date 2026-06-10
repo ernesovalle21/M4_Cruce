@@ -156,7 +156,8 @@ public static class CorridorBuilder
         float jcRoadCx = (jcRoadA + jcRoadB) * 0.5f, jcRoadLen = jcRoadB - jcRoadA;
         float jcA = jcRoadA + HalfInter, jcB = jcRoadB - HalfInter;   // tramo para marcas
         float jcCx = (jcA + jcB) * 0.5f, jcLen = jcB - jcA;
-        float jcFeederZ = -2.2f;   // carril de Jesús Cantú que entra a Elizondo
+        float jcFeederZ = 2.2f;    // carril NORTE de Jesús Cantú: sigue el flujo (entra a Elizondo)
+                                    // el carril SUR (-jcFeederZ) es el sentido CONTRARIO
 
         Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 180f, 0.1f, 350f), matPasto, R);
         Cube("Elizondo_Road",  new Vector3(elizCx,  -0.05f, 0f), new Vector3(elizLen,  0.1f, RoadWidth), matAsfalto, R);
@@ -268,6 +269,24 @@ public static class CorridorBuilder
                 waypoints = path.ToArray(),
                 interval = 6f
             });
+        }
+
+        // ---- Jesús Cantú: SENTIDO CONTRARIO (carril sur) ----
+        // Doble sentido: el carril sur va al revés del flujo. Solo se incorporan a él
+        // autos que VIENEN DE GARCÍA ROEL (giran al cruce y salen por Jesús Cantú).
+        {
+            Transform wpOpp = new GameObject("JesusCantu_Opuesto").transform;
+            wpOpp.SetParent(wpRoot, false);
+            float awaySign = -Dir;                                   // sentido contrario al flujo
+            float awayEdge = (awaySign > 0) ? RoadXMax : RoadXMin;   // borde por donde sale
+            float jcOppZ = -jcFeederZ;                               // carril sur
+            var opp = new List<Transform>
+            {
+                Wp("JC_Opp_0", new Vector3(garciaRoelX + awaySign * 3f, 0f, -5f), wpOpp),                 // sale del cruce de García Roel
+                Wp("JC_Opp_1", new Vector3(garciaRoelX + awaySign * (HalfInter + 5f), 0f, jcOppZ), wpOpp), // se incorpora al carril sur
+                Wp("JC_Opp_2", new Vector3(awayEdge, 0f, jcOppZ), wpOpp),                                  // sale por el borde
+            };
+            entries.Add(new CarSpawner.SpawnPoint { spawnTransform = opp[0], waypoints = opp.ToArray(), interval = 7f });
         }
 
         // ---- Cada cruce ----
