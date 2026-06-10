@@ -65,7 +65,9 @@ AgentPy: la coordinación reduce la espera ~71%.
 ## 5. Cosas MAL / inconsistentes a corregir
 
 1. **Corrida "sin coordinar" incompleta** (12.6 s, 0 carros) → re-correr ~5 min igual que la coordinada para que la comparación en Unity sea válida.
-2. **Datos reales de volumen** (mañana/mediodía/tarde): NO se usan (estimaciones). El reto los exige → conseguirlos y meterlos en `arrival_rate`/spawner.
+2. **Datos reales de volumen**: ~~conseguirlos~~ **NO serán proporcionados** → se usan
+   **estimaciones justificadas** con valores típicos de ingeniería de tráfico (notebook §6).
+   La rúbrica acepta "una aproximación coherente y justificada". **Resuelto como supuesto.**
 3. **Parámetros distintos entre Unity y Python:**
    - Unity nativo: distancias en *unidades* (cruces a ±130 u), ciclo 20 s, velocidad 5 u/s.
    - Python/análisis: distancias reales (345/500 m), ciclo 66 s, 40 km/h.
