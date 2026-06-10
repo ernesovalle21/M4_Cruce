@@ -35,7 +35,7 @@ public static class CorridorBuilder
     private const float CrossRed = 14f;
     private const float AllRed = 1f;            // colchón de todo-rojo
 
-    private const float RoadXMin = -150f;       // tramo aún más largo
+    private const float RoadXMin = -180f;       // Elizondo extendida también a la izquierda
     private const float RoadXMax = 210f;        // Elizondo extendida más a la derecha
     private const float RoadWidth = 14f;
     private static readonly float[] LaneZ = { -4.5f, 0f, 4.5f };
@@ -58,7 +58,7 @@ public static class CorridorBuilder
     // derecha = García Roel. (Ajusta las X libremente.)
     private static readonly Cross[] Crosses =
     {
-        new Cross("S1_Izq_GarzaSada",  -90.0f, +1), // izquierda: Garza Sada (angosta, 1 carril)
+        new Cross("S1_Izq_GarzaSada", -130.0f, +1), // izquierda: Garza Sada (angosta, 1 carril)
         new Cross("S2_JuncoT",           0.0f, +1), // centro: Junco (T doble sentido)
         new Cross("S3_Der_GarciaRoel", 130.0f, -1), // derecha: García Roel (cruz completa)
     };
