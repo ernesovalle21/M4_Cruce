@@ -272,21 +272,27 @@ public static class CorridorBuilder
         }
 
         // ---- Jesús Cantú: SENTIDO CONTRARIO (carril sur) ----
-        // Doble sentido: el carril sur va al revés del flujo. Solo se incorporan a él
-        // autos que VIENEN DE GARCÍA ROEL (giran al cruce y salen por Jesús Cantú).
+        // Doble sentido: el carril sur va al revés del flujo. Estos autos NO aparecen de
+        // la nada en la vuelta: VIENEN POR EL BRAZO SUR DE GARCÍA ROEL (aparecen lejos, en
+        // el borde), suben, respetan el semáforo del cruce y GIRAN para incorporarse al
+        // carril sur de Jesús Cantú; luego salen por el borde de entrada.
         {
             Transform wpOpp = new GameObject("JesusCantu_Opuesto").transform;
             wpOpp.SetParent(wpRoot, false);
             float awaySign = -Dir;                                   // sentido contrario al flujo
             float awayEdge = (awaySign > 0) ? RoadXMax : RoadXMin;   // borde por donde sale
             float jcOppZ = -jcFeederZ;                               // carril sur
+            float grUpX = garciaRoelX + 2.5f;                        // carril que sube por García Roel
+            float grSouthEnd = -(HalfInter + ArmLen) + 6f;          // extremo sur del brazo (aparece aquí)
             var opp = new List<Transform>
             {
-                Wp("JC_Opp_0", new Vector3(garciaRoelX + awaySign * 3f, 0f, -5f), wpOpp),                 // sale del cruce de García Roel
-                Wp("JC_Opp_1", new Vector3(garciaRoelX + awaySign * (HalfInter + 5f), 0f, jcOppZ), wpOpp), // se incorpora al carril sur
-                Wp("JC_Opp_2", new Vector3(awayEdge, 0f, jcOppZ), wpOpp),                                  // sale por el borde
+                Wp("JC_Opp_0", new Vector3(grUpX, 0f, grSouthEnd + 6f), wpOpp),   // viene desde García Roel (lejos, al sur)
+                Wp("JC_Opp_1", new Vector3(grUpX, 0f, -11f), wpOpp),             // alto del semáforo de García Roel
+                Wp("JC_Opp_2", new Vector3(grUpX, 0f, -2f), wpOpp),              // entra al cruce
+                Wp("JC_Opp_3", new Vector3(garciaRoelX + awaySign * (HalfInter + 4f), 0f, jcOppZ), wpOpp), // gira al carril sur de Cantú
+                Wp("JC_Opp_4", new Vector3(awayEdge, 0f, jcOppZ), wpOpp),        // sale por el borde
             };
-            entries.Add(new CarSpawner.SpawnPoint { spawnTransform = opp[0], waypoints = opp.ToArray(), interval = 7f });
+            entries.Add(new CarSpawner.SpawnPoint { spawnTransform = opp[0], waypoints = opp.ToArray(), interval = 8f });
         }
 
         // ---- Cada cruce ----
