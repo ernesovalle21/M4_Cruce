@@ -657,7 +657,7 @@ public static class CorridorBuilder
         Material matCampus = GetOrCreateMat("Mat_Campus", new Color32(0x53, 0x68, 0x8f, 0xFF));      // institucional
         Material matQuad   = GetOrCreateMat("Mat_CampusVerde", new Color32(0x3f, 0x7a, 0x3a, 0xFF)); // jardín verde
         Material matTecAzul = GetOrCreateMat("Mat_TecAzul", new Color32(0x00, 0x3D, 0x6B, 0xFF));    // azul Tec
-        Material matMural   = GetOrCreateMat("Mat_TecMural", new Color32(0xC0, 0x55, 0x2E, 0xFF));   // mural (terracota)
+        Material matMural   = GetOrCreateMat("Mat_TecMuralAzul", new Color32(0x2E, 0x6F, 0xC0, 0xFF)); // mural (azul)
         Material matCamino  = GetOrCreateMat("Mat_Camino", new Color32(0xc9, 0xbf, 0xa6, 0xFF));     // andadores
         Material matPoste   = GetOrCreateMat("Mat_Semaforo_Caja", new Color32(0x11, 0x11, 0x11, 0xFF));
 
