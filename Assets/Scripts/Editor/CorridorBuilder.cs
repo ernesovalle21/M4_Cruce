@@ -238,9 +238,6 @@ public static class CorridorBuilder
                 GreenDur, YellowDur, RedDur, new Vector3(0f, 0f, -c.side * 0.35f),
                 matSemCaja, matVerde, matAmarillo, matRojo, matFocoOff, G);
 
-            // Junco: cruce peatonal COMPLETO (prueba). Los demás: cebra de aproximación (por ahora).
-            if (!isT)
-                BuildCrosswalk(c.name + "_Eliz", new Vector3(c.x - Dir * (HalfInter + 2f), -0.03f, 0f), true, RoadWidth - 1f, matLinea, G);
             Cube(c.name + "_AltoEliz", new Vector3(elizLightX, -0.03f, 0f), new Vector3(0.9f, 0.01f, RoadWidth), matLinea, G);
             StopLineTrigger elizStop = BuildStopLine(c.name + "_Eliz", new Vector3(elizLightX, 0f, 0f), new Vector3(3f, 3f, RoadWidth), tlEliz, new Vector3(c.x, 0f, 0f), G);
 
@@ -254,10 +251,7 @@ public static class CorridorBuilder
                 matSemCaja, matVerde, matAmarillo, matRojo, matFocoOff, G);
 
             float crossW = cw;
-            if (isT)
-                BuildCrosswalkBox(c.name, c.x, isT, crossW, matLinea, G); // cruce peatonal completo en Junco
-            else
-                BuildCrosswalk(c.name + "_Cross", new Vector3(c.x, -0.03f, crossSide * (HalfInter + 2f)), false, crossW, matLinea, G);
+            BuildCrosswalkBox(c.name, c.x, isT, crossW, matLinea, G); // cruce peatonal completo en TODOS los cruces
             Cube(c.name + "_AltoCross", new Vector3(c.x, -0.03f, crossStopZ), new Vector3(crossW, 0.01f, 0.9f), matLinea, G);
             StopLineTrigger crossStop = BuildStopLine(c.name + "_Cross", new Vector3(c.x, 0f, crossStopZ), new Vector3(crossW, 3f, 3f), tlCross, new Vector3(c.x, 0f, 0f), G);
 
@@ -694,7 +688,8 @@ public static class CorridorBuilder
     {
         GameObject group = new GameObject(name + "_CrucePeatonal");
         group.transform.SetParent(parent, false);
-        group.transform.localPosition = center;
+        // Levantar por encima del asfalto (la calle llega a y=0): así la cebra SÍ se ve.
+        group.transform.localPosition = new Vector3(center.x, 0.05f, center.z);
 
         int stripeCount = 7;
         float stripeWidth = 0.7f;
