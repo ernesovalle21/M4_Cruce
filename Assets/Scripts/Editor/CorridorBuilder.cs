@@ -37,7 +37,8 @@ public static class CorridorBuilder
 
     private const float RoadXMin = -180f;       // Elizondo extendida también a la izquierda
     private const float RoadXMax = 210f;        // Elizondo extendida más a la derecha
-    private const float RoadWidth = 14f;
+    private const float RoadWidth = 14f;     // Av. Luis Elizondo: 3 carriles
+    private const float JCWidth = 9f;        // Jesús Cantú: 2 carriles (más angosta)
     private static readonly float[] LaneZ = { -4.5f, 0f, 4.5f };
     private const float HalfInter = 7f;
     private const float Bz = RoadWidth * 0.5f + 2f;
@@ -142,8 +143,24 @@ public static class CorridorBuilder
         float roadCenterX = (RoadXMin + RoadXMax) * 0.5f;
         float roadLen = RoadXMax - RoadXMin;
 
+        // García Roel marca el INICIO de Av. Luis Elizondo. El tramo de entrada (antes de
+        // García Roel) es JESÚS CANTÚ: calle de DOS SENTIDOS y 2 carriles (más angosta).
+        // La calzada pasa de 2 carriles (Jesús Cantú) a 3 carriles (Elizondo) en García Roel.
+        float garciaRoelX = 0f;
+        foreach (var cc in Crosses) if (cc.name == S3Name) garciaRoelX = cc.x;
+        float elizA = (Dir < 0) ? RoadXMin : garciaRoelX;
+        float elizB = (Dir < 0) ? garciaRoelX : RoadXMax;
+        float elizCx = (elizA + elizB) * 0.5f, elizLen = elizB - elizA;
+        float jcRoadA = (Dir < 0) ? garciaRoelX : RoadXMin;
+        float jcRoadB = (Dir < 0) ? RoadXMax : garciaRoelX;
+        float jcRoadCx = (jcRoadA + jcRoadB) * 0.5f, jcRoadLen = jcRoadB - jcRoadA;
+        float jcA = jcRoadA + HalfInter, jcB = jcRoadB - HalfInter;   // tramo para marcas
+        float jcCx = (jcA + jcB) * 0.5f, jcLen = jcB - jcA;
+        float jcFeederZ = -2.2f;   // carril de Jesús Cantú que entra a Elizondo
+
         Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 180f, 0.1f, 350f), matPasto, R);
-        Cube("Elizondo_Road", new Vector3(roadCenterX, -0.05f, 0f), new Vector3(roadLen, 0.1f, RoadWidth), matAsfalto, R);
+        Cube("Elizondo_Road",  new Vector3(elizCx,  -0.05f, 0f), new Vector3(elizLen,  0.1f, RoadWidth), matAsfalto, R);
+        Cube("JesusCantu_Road", new Vector3(jcRoadCx, -0.05f, 0f), new Vector3(jcRoadLen, 0.1f, JCWidth), matAsfalto, R);
 
         // Banquetas segmentadas
         var northGaps = new List<Vector2>();
@@ -157,26 +174,18 @@ public static class CorridorBuilder
         BuildSidewalk("Banqueta_Norte",  Bz, northGaps, R, matBanqueta);
         BuildSidewalk("Banqueta_Sur",   -Bz, southGaps, R, matBanqueta);
 
-        // García Roel marca el INICIO de Av. Luis Elizondo. El tramo de entrada (antes
-        // de García Roel) es JESÚS CANTÚ: calle de DOS SENTIDOS y 2 carriles.
-        float garciaRoelX = 0f;
-        foreach (var cc in Crosses) if (cc.name == S3Name) garciaRoelX = cc.x;
-        float elizA = (Dir < 0) ? RoadXMin : garciaRoelX;
-        float elizB = (Dir < 0) ? garciaRoelX : RoadXMax;
-        float elizCx = (elizA + elizB) * 0.5f, elizLen = elizB - elizA;
-        float jcA = ((Dir < 0) ? garciaRoelX : RoadXMin) + HalfInter;
-        float jcB = ((Dir < 0) ? RoadXMax : garciaRoelX) - HalfInter;
-        float jcCx = (jcA + jcB) * 0.5f, jcLen = jcB - jcA;
-
         // Elizondo: divisores de los 3 carriles (blanco), SOLO en el tramo de Elizondo
         Cube("Eliz_Div_N", new Vector3(elizCx, -0.045f,  2.25f), new Vector3(elizLen, 0.01f, 0.25f), matLinea, R);
         Cube("Eliz_Div_S", new Vector3(elizCx, -0.045f, -2.25f), new Vector3(elizLen, 0.01f, 0.25f), matLinea, R);
         // Jesús Cantú: doble línea amarilla central (separa los dos sentidos)
         Cube("JesusCantu_Doble_N", new Vector3(jcCx, -0.045f,  0.45f), new Vector3(jcLen, 0.01f, 0.18f), matLineaAmarilla, R);
         Cube("JesusCantu_Doble_S", new Vector3(jcCx, -0.045f, -0.45f), new Vector3(jcLen, 0.01f, 0.18f), matLineaAmarilla, R);
-        // Orillas (ambas calles)
-        Cube("Linea_Orilla_N", new Vector3(roadCenterX, -0.045f,  6.8f), new Vector3(roadLen, 0.01f, 0.3f), matLinea, R);
-        Cube("Linea_Orilla_S", new Vector3(roadCenterX, -0.045f, -6.8f), new Vector3(roadLen, 0.01f, 0.3f), matLinea, R);
+        // Orillas: Elizondo (ancho) y Jesús Cantú (angosto), cada una a su orilla
+        float elizEdge = RoadWidth * 0.5f - 0.2f, jcEdge = JCWidth * 0.5f - 0.2f;
+        Cube("Eliz_Orilla_N", new Vector3(elizCx, -0.045f,  elizEdge), new Vector3(elizLen, 0.01f, 0.3f), matLinea, R);
+        Cube("Eliz_Orilla_S", new Vector3(elizCx, -0.045f, -elizEdge), new Vector3(elizLen, 0.01f, 0.3f), matLinea, R);
+        Cube("JC_Orilla_N",   new Vector3(jcRoadCx, -0.045f,  jcEdge), new Vector3(jcRoadLen, 0.01f, 0.3f), matLinea, R);
+        Cube("JC_Orilla_S",   new Vector3(jcRoadCx, -0.045f, -jcEdge), new Vector3(jcRoadLen, 0.01f, 0.3f), matLinea, R);
 
         // Flechas de sentido de Elizondo (un solo sentido, 3 carriles)
         float arrowYaw = Dir < 0 ? 180f : 0f;
@@ -194,8 +203,8 @@ public static class CorridorBuilder
         float yawAway = Dir < 0 ? 0f : 180f;   // sentido contrario
         for (float ax = jcA + 10f; ax <= jcB - 10f; ax += 20f)
         {
-            BuildArrow(ax,  3.5f, yawAway, R, matLinea);
-            BuildArrow(ax, -3.5f, yawInto, R, matLinea);
+            BuildArrow(ax,  jcFeederZ, yawInto, R, matLinea);    // carril que entra a Elizondo
+            BuildArrow(ax, -jcFeederZ, yawAway, R, matLinea);    // carril opuesto (sentido contrario)
         }
 
         // Letreros de calle: Jesús Cantú (entrada) y Av. Luis Elizondo (tras García Roel)
@@ -217,15 +226,19 @@ public static class CorridorBuilder
         Transform wpRoot = new GameObject("Waypoints").transform;
         wpRoot.SetParent(R, false);
 
-        // ---- Entradas de Elizondo (3 carriles) ----
+        // ---- Entradas: arrancan en JESÚS CANTÚ (carril que entra a Elizondo) y, tras
+        //      García Roel, la calzada se ABRE de 2 a 3 carriles (cada flujo a su carril) ----
+        float[] entryXForLane = { entryX, entryX - 7f, entryX - 14f };
         for (int lane = 0; lane < LaneZ.Length; lane++)
         {
             float z = LaneZ[lane];
+            float ex = entryXForLane[lane % entryXForLane.Length];
             bool giraEnS1 = Mathf.Approximately(z, RightLaneZ); // carril derecho gira en S1
             Transform laneRoot = new GameObject("Elizondo_Carril_" + lane).transform;
             laneRoot.SetParent(wpRoot, false);
 
-            var path = new List<Transform> { Wp($"E{lane}_Entrada", new Vector3(entryX, 0f, z), laneRoot) };
+            // arranca en el carril de Jesús Cantú (2 carriles), escalonado para no encimar spawns
+            var path = new List<Transform> { Wp($"E{lane}_Entrada", new Vector3(ex, 0f, jcFeederZ), laneRoot) };
             bool terminado = false;
             foreach (var c in ordered)
             {
@@ -241,7 +254,10 @@ public static class CorridorBuilder
                     terminado = true;
                     break;
                 }
-                path.Add(Wp($"E{lane}_Ante_{c.name}", new Vector3(AnteX(c.x), 0f, z), laneRoot));
+                // En García Roel los carros siguen en el carril de Jesús Cantú; tras el cruce
+                // se abren a su carril de Elizondo (z): la calzada pasa de 2 a 3 carriles.
+                float anteZ = (c.name == S3Name) ? jcFeederZ : z;
+                path.Add(Wp($"E{lane}_Ante_{c.name}", new Vector3(AnteX(c.x), 0f, anteZ), laneRoot));
                 path.Add(Wp($"E{lane}_Post_{c.name}", new Vector3(PostX(c.x), 0f, z), laneRoot));
             }
             if (!terminado) path.Add(Wp($"E{lane}_Salida", new Vector3(exitX, 0f, z), laneRoot));
@@ -250,7 +266,7 @@ public static class CorridorBuilder
             {
                 spawnTransform = path[0],
                 waypoints = path.ToArray(),
-                interval = 5f
+                interval = 6f
             });
         }
 
