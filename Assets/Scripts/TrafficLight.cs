@@ -30,6 +30,10 @@ public class TrafficLight : MonoBehaviour
     public Renderer greenLamp;
     public Material lampOff;
 
+    [Header("Control externo (coordinado-actuado)")]
+    [Tooltip("Si está activo, la fase la fija un IntersectionController, no el reloj.")]
+    public bool externalControl = false;
+
     [Header("Compatibilidad")]
     public Phase startPhase = Phase.Green;
     public TrafficLight partnerLight;
@@ -42,7 +46,13 @@ public class TrafficLight : MonoBehaviour
 
     void Update()
     {
-        Phase p = ComputePhase(Time.time);
+        if (externalControl) return; // la fase la fija el controlador
+        SetPhase(ComputePhase(Time.time));
+    }
+
+    /// <summary>Fija la fase (usado por el control externo o el reloj).</summary>
+    public void SetPhase(Phase p)
+    {
         if (!initialized || p != currentPhase)
         {
             initialized = true;

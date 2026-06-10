@@ -248,7 +248,19 @@ public static class CorridorBuilder
             float crossW = cw;
             BuildCrosswalk(c.name + "_Cross", new Vector3(c.x, -0.03f, crossSide * (HalfInter + 2f)), false, matLinea, G);
             Cube(c.name + "_AltoCross", new Vector3(c.x, -0.03f, crossStopZ), new Vector3(crossW, 0.01f, 0.9f), matLinea, G);
-            BuildStopLine(c.name + "_Cross", new Vector3(c.x, 0f, crossStopZ), new Vector3(crossW, 3f, 3f), tlCross, G);
+            StopLineTrigger crossStop = BuildStopLine(c.name + "_Cross", new Vector3(c.x, 0f, crossStopZ), new Vector3(crossW, 3f, 3f), tlCross, G);
+
+            // Control coordinado-actuado: Elizondo verde por defecto; la transversal
+            // toma su turno coordinado (onda verde) solo si hay demanda.
+            var ctrl = g.AddComponent<IntersectionController>();
+            ctrl.major = tlEliz;
+            ctrl.minor = tlCross;
+            ctrl.minorStop = crossStop;
+            ctrl.cycle = cycle;
+            ctrl.armOffset = Mathf.Repeat(offset + GreenDur, cycle);
+            ctrl.yellow = YellowDur;
+            ctrl.allRed = AllRed;
+            ctrl.minorGreen = CrossGreen;
 
             // --- Tráfico transversal ---
             Transform crossWpRoot = new GameObject("WP_" + c.name).transform;
@@ -566,7 +578,7 @@ public static class CorridorBuilder
         return rend;
     }
 
-    private static void BuildStopLine(string name, Vector3 position, Vector3 size, TrafficLight tl, Transform parent)
+    private static StopLineTrigger BuildStopLine(string name, Vector3 position, Vector3 size, TrafficLight tl, Transform parent)
     {
         GameObject go = new GameObject("StopLine_" + name);
         go.transform.SetParent(parent, false);
@@ -576,6 +588,7 @@ public static class CorridorBuilder
         bc.isTrigger = true;
         var slt = go.AddComponent<StopLineTrigger>();
         slt.trafficLight = tl;
+        return slt;
     }
 
     private static Material GetOrCreateMat(string name, Color color)
