@@ -24,7 +24,7 @@ public static class CorridorBuilder
 
     // ---- Parámetros del corredor ----
     private const int Dir = -1;                 // sentido de Elizondo: -1 = derecha->izquierda
-    private const float CarSpeed = 5f;
+    private const float CarSpeed = 7f;          // velocidad de crucero (subida; offsets se recalculan solos)
     private const float GreenDur = 10f;         // Elizondo
     private const float YellowDur = 2f;
     private const float RedDur = 8f;
@@ -489,8 +489,8 @@ public static class CorridorBuilder
                 if (OverlapsRoad(jx, jz, 4f)) continue;
                 // Reservar TODA la cuadra del campus del Tec (entre Garza Sada y Junco, lado norte)
                 if (jx > -122f && jx < -8f && jz > 12f && jz < 160f) continue;
-                // Reservar la cuadra del teatro + parque (entre Junco y García Roel, lado sur)
-                if (jx > 8f && jx < 92f && jz < -22f && jz > -72f) continue;
+                // Reservar la cuadra del teatro + parque (DEBAJO de la escuela, lado sur)
+                if (jx > -120f && jx < -6f && jz < -16f && jz > -110f) continue;
                 if (rng.NextDouble() < 0.25) continue;
 
                 float w = 5f + (float)rng.NextDouble() * 4f;
@@ -556,19 +556,19 @@ public static class CorridorBuilder
 
     private static void BuildTheater(Transform parent)
     {
-        Material mt    = GetOrCreateMat("Mat_Teatro",     new Color32(0x8a, 0x3b, 0x33, 0xFF)); // fachada terracota
+        Material mt    = GetOrCreateMat("Mat_Teatro",     new Color32(0x6b, 0x47, 0x2e, 0xFF)); // estructura café
         Material mtrim = GetOrCreateMat("Mat_TeatroTrim", new Color32(0xd8, 0xc8, 0xa0, 0xFF)); // detalles claros
 
         GameObject g = new GameObject("Teatro");
         g.transform.SetParent(parent, false);
-        float tx = 72f, tz = -46f;
+        float tx = -30f, tz = -52f;   // debajo de la escuela (sur), lado derecho de la cuadra
 
-        Cube("Teatro_Sala",    new Vector3(tx, 8f, tz - 6f),  new Vector3(30f, 16f, 26f), mt, g.transform);     // sala principal
-        Cube("Teatro_Techo",   new Vector3(tx, 16.6f, tz - 6f), new Vector3(33f, 1.4f, 28f), mtrim, g.transform); // cornisa
-        Cube("Teatro_Fachada", new Vector3(tx, 5f, tz + 10f),  new Vector3(34f, 10f, 6f), mtrim, g.transform);  // pórtico
-        for (int k = 0; k < 4; k++)
-            Cube($"Teatro_Columna_{k}", new Vector3(tx - 13.5f + k * 9f, 4f, tz + 13f), new Vector3(1.6f, 8f, 1.6f), mtrim, g.transform);
-        Cube("Teatro_Escalones", new Vector3(tx, 0.3f, tz + 16f), new Vector3(30f, 0.6f, 4f), mtrim, g.transform);
+        Cube("Teatro_Sala",    new Vector3(tx, 11f, tz - 8f),  new Vector3(42f, 22f, 34f), mt, g.transform);     // bloque grande
+        Cube("Teatro_Techo",   new Vector3(tx, 22.8f, tz - 8f), new Vector3(45f, 1.6f, 36f), mtrim, g.transform); // cornisa
+        Cube("Teatro_Fachada", new Vector3(tx, 6f, tz + 11f),  new Vector3(46f, 12f, 7f), mt, g.transform);     // frente café
+        for (int k = 0; k < 5; k++)
+            Cube($"Teatro_Columna_{k}", new Vector3(tx - 18f + k * 9f, 4.5f, tz + 14.5f), new Vector3(1.8f, 9f, 1.8f), mtrim, g.transform);
+        Cube("Teatro_Escalones", new Vector3(tx, 0.3f, tz + 18f), new Vector3(40f, 0.6f, 5f), mtrim, g.transform);
     }
 
     private static void BuildPark(Transform parent, Material tronco, Material hojas)
@@ -578,13 +578,17 @@ public static class CorridorBuilder
 
         GameObject g = new GameObject("Parque");
         g.transform.SetParent(parent, false);
-        float px = 30f, pz = -46f;
+        float px = -86f, pz = -62f;       // a la izquierda del teatro, extendido hacia atrás (sur)
+        float pw = 66f, pd = 84f;
 
-        Cube("Parque_Cesped",   new Vector3(px, -0.05f, pz), new Vector3(40f, 0.1f, 40f), mp, g.transform);
-        Cube("Parque_CaminoH",  new Vector3(px, -0.04f, pz), new Vector3(40f, 0.02f, 3f), mpath, g.transform);
-        Cube("Parque_CaminoV",  new Vector3(px, -0.04f, pz), new Vector3(3f, 0.02f, 40f), mpath, g.transform);
-        foreach (var off in new (float dx, float dz)[] { (-13f, -13f), (13f, -13f), (-13f, 13f), (13f, 13f), (-15f, 0f), (15f, 0f) })
-            BuildTree(new Vector3(px + off.dx, 0f, pz + off.dz), tronco, hojas, g.transform);
+        Cube("Parque_Cesped",  new Vector3(px, -0.05f, pz), new Vector3(pw, 0.1f, pd), mp, g.transform);
+        Cube("Parque_CaminoH", new Vector3(px, -0.04f, pz), new Vector3(pw, 0.02f, 3f), mpath, g.transform);
+        Cube("Parque_CaminoV", new Vector3(px, -0.04f, pz), new Vector3(3f, 0.02f, pd), mpath, g.transform);
+        // árboles distribuidos en el parque más grande
+        for (float ax = px - pw * 0.5f + 8f; ax <= px + pw * 0.5f - 8f; ax += 14f)
+            for (float az = pz - pd * 0.5f + 8f; az <= pz + pd * 0.5f - 8f; az += 16f)
+                if (Mathf.Abs(ax - px) > 4f || Mathf.Abs(az - pz) > 4f) // dejar libres los caminos
+                    BuildTree(new Vector3(ax, 0f, az), tronco, hojas, g.transform);
     }
 
     private static void BuildTree(Vector3 pos, Material tronco, Material hojas, Transform parent)
