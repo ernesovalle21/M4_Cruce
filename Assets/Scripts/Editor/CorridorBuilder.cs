@@ -79,6 +79,35 @@ public static class CorridorBuilder
     [MenuItem("M4Cruce/Construir Corredor (SIN coordinar)")]
     public static void BuildSinCoordinar() => BuildCorridor(false);
 
+    [MenuItem("M4Cruce/Agregar Cámaras (vistas)")]
+    public static void AddCameras()
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+        {
+            EditorUtility.DisplayDialog("Cámaras", "No hay Main Camera en la escena.", "OK");
+            return;
+        }
+        ConfigureCameraDirector(cam, cam.transform.position, cam.transform.eulerAngles);
+        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        EditorUtility.DisplayDialog("M4 Cruce — Cámaras",
+            "Listo. En Play verás los botones de cámara (arriba a la derecha):\n" +
+            "Panorámica · Seguir carro · y una vista fija por cada cruce.", "OK");
+    }
+
+    private static void ConfigureCameraDirector(Camera cam, Vector3 overviewPos, Vector3 overviewEuler)
+    {
+        var dir = cam.GetComponent<CameraDirector>();
+        if (dir == null) dir = cam.gameObject.AddComponent<CameraDirector>();
+        dir.overviewPos = overviewPos;
+        dir.overviewEuler = overviewEuler;
+        var pos = new List<Vector3>();
+        var names = new List<string>();
+        foreach (var c in Crosses) { pos.Add(new Vector3(c.x, 0f, 0f)); names.Add(c.name.Replace("_", " ")); }
+        dir.intersections = pos.ToArray();
+        dir.intersectionNames = names.ToArray();
+    }
+
     private static void BuildCorridor(bool coordinated)
     {
         CleanPrevious();
@@ -422,8 +451,11 @@ public static class CorridorBuilder
             camGO.tag = "MainCamera";
             cam = camGO.AddComponent<Camera>();
         }
-        cam.transform.position = new Vector3(15f, 285f, -185f);
-        cam.transform.rotation = Quaternion.Euler(57f, 0f, 0f);
+        Vector3 camPos = new Vector3(15f, 285f, -185f);
+        Vector3 camEuler = new Vector3(57f, 0f, 0f);
+        cam.transform.position = camPos;
+        cam.transform.rotation = Quaternion.Euler(camEuler);
+        ConfigureCameraDirector(cam, camPos, camEuler);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         AssetDatabase.SaveAssets();
