@@ -312,15 +312,9 @@ public static class CorridorBuilder
                     baja.Add(Wp($"Junco_Baja_Post_{cc.name}", new Vector3(PostX(cc.x), 0f, zMerge), crossWpRoot));
                 }
                 baja.Add(Wp("Junco_Baja_Salida", new Vector3(exitX, 0f, zMerge), crossWpRoot));
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 7f });
-
-                // Carril que sube (se aleja por Junco)
-                var sube = new List<Transform>
-                {
-                    Wp("Junco_Sube_0", new Vector3(2.3f, 0f, 12f), crossWpRoot),
-                    Wp("Junco_Sube_1", new Vector3(2.3f, 0f, 140f), crossWpRoot),
-                };
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 5f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 5f });
+                // Junco es T: TODO el tráfico entra desde arriba y da vuelta hacia Elizondo.
+                // (Se eliminó el carril que aparecía en medio.)
             }
             else if (isS3)
             {
@@ -329,24 +323,34 @@ public static class CorridorBuilder
                 float northEnd =  (HalfInter + ArmLen) - 6f;
                 float northStopZ = HalfInter + 4f;
 
-                // Carril derecho: SUBE (+Z), se detiene en el lado sur (semáforo existente)
+                // Carril derecho: SUBE (+Z), alto en el sur + cede el paso antes de cruzar
                 var sube = new List<Transform>
                 {
                     Wp("GR_Sube_0", new Vector3(c.x + 2.5f, 0f, southEnd),   crossWpRoot),
                     Wp("GR_Sube_1", new Vector3(c.x + 2.5f, 0f, crossStopZ), crossWpRoot),
-                    Wp("GR_Sube_2", new Vector3(c.x + 2.5f, 0f, 11f),        crossWpRoot),
-                    Wp("GR_Sube_3", new Vector3(c.x + 2.5f, 0f, northEnd),   crossWpRoot),
                 };
+                Transform sg = Wp("GR_Sube_gate", new Vector3(c.x + 2.5f, 0f, -7f), crossWpRoot);
+                var ygS = sg.gameObject.AddComponent<YieldGate>();
+                ygS.checkOffset = new Vector3(0f, 0f, 7f);              // zona en el centro del cruce
+                ygS.halfExtents = new Vector3(1.8f, 1.5f, 6.5f);       // solo su carril (no choca con el otro sentido)
+                sube.Add(sg);
+                sube.Add(Wp("GR_Sube_2", new Vector3(c.x + 2.5f, 0f, 11f),      crossWpRoot));
+                sube.Add(Wp("GR_Sube_3", new Vector3(c.x + 2.5f, 0f, northEnd), crossWpRoot));
                 entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 6f });
 
-                // Carril izquierdo: BAJA (-Z), se detiene en el lado norte
+                // Carril izquierdo: BAJA (-Z), alto en el norte + cede el paso antes de cruzar
                 var baja = new List<Transform>
                 {
                     Wp("GR_Baja_0", new Vector3(c.x - 2.5f, 0f, northEnd),   crossWpRoot),
                     Wp("GR_Baja_1", new Vector3(c.x - 2.5f, 0f, northStopZ), crossWpRoot),
-                    Wp("GR_Baja_2", new Vector3(c.x - 2.5f, 0f, -11f),       crossWpRoot),
-                    Wp("GR_Baja_3", new Vector3(c.x - 2.5f, 0f, southEnd),   crossWpRoot),
                 };
+                Transform bg = Wp("GR_Baja_gate", new Vector3(c.x - 2.5f, 0f, 7f), crossWpRoot);
+                var ygB = bg.gameObject.AddComponent<YieldGate>();
+                ygB.checkOffset = new Vector3(0f, 0f, -7f);
+                ygB.halfExtents = new Vector3(1.8f, 1.5f, 6.5f);
+                baja.Add(bg);
+                baja.Add(Wp("GR_Baja_2", new Vector3(c.x - 2.5f, 0f, -11f),     crossWpRoot));
+                baja.Add(Wp("GR_Baja_3", new Vector3(c.x - 2.5f, 0f, southEnd), crossWpRoot));
                 entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 6f });
 
                 // Alto + semáforo (trigger) del lado norte para el sentido que baja
@@ -483,8 +487,8 @@ public static class CorridorBuilder
                 float jx = bx + (float)(rng.NextDouble() * 4 - 2);
                 float jz = bz + (float)(rng.NextDouble() * 4 - 2);
                 if (OverlapsRoad(jx, jz, 4f)) continue;
-                // Reservar la zona del campus del Tec (entre Garza Sada y Junco, lado norte)
-                if (jx > -122f && jx < -8f && jz > 12f && jz < 100f) continue;
+                // Reservar TODA la cuadra del campus del Tec (entre Garza Sada y Junco, lado norte)
+                if (jx > -122f && jx < -8f && jz > 12f && jz < 160f) continue;
                 if (rng.NextDouble() < 0.25) continue;
 
                 float w = 5f + (float)rng.NextDouble() * 4f;
@@ -517,23 +521,23 @@ public static class CorridorBuilder
         GameObject g = new GameObject("Campus_Tec");
         g.transform.SetParent(parent, false);
 
-        // Explanada/quad verde central del campus (lado norte, entre los dos cruces)
-        Cube("Campus_Quad", new Vector3(-65f, -0.06f, 45f), new Vector3(108f, 0.08f, 52f), matQuad, g.transform);
+        // Explanada/quad verde del campus (cubre toda la cuadra hacia el fondo)
+        Cube("Campus_Quad", new Vector3(-65f, -0.06f, 80f), new Vector3(112f, 0.08f, 130f), matQuad, g.transform);
 
-        // Edificios grandes del campus en dos filas
+        // Edificios grandes del campus en varias filas (toda la cuadra)
         float[] cxs = { -110f, -86f, -62f, -38f, -18f };
-        float[] czs = { 26f, 64f };
+        float[] czs = { 26f, 58f, 92f, 126f };
         int i = 0;
         foreach (float cz in czs)
             foreach (float bx in cxs)
             {
                 float h = 9f + ((i * 3) % 4) * 2f;
-                Cube($"Campus_Edif_{i}", new Vector3(bx, h * 0.5f, cz), new Vector3(15f, h, 16f), matCampus, g.transform);
+                Cube($"Campus_Edif_{i}", new Vector3(bx, h * 0.5f, cz), new Vector3(15f, h, 18f), matCampus, g.transform);
                 i++;
             }
 
-        // Edificio principal (la escuela) más grande al fondo
-        Cube("Campus_Principal", new Vector3(-62f, 9f, 90f), new Vector3(56f, 18f, 16f), matCampus, g.transform);
+        // Edificio principal (la escuela) más grande, al fondo de la cuadra
+        Cube("Campus_Principal", new Vector3(-62f, 9.5f, 152f), new Vector3(60f, 19f, 16f), matCampus, g.transform);
     }
 
     private static void BuildTree(Vector3 pos, Material tronco, Material hojas, Transform parent)
