@@ -11,6 +11,17 @@ public class StopLineTrigger : MonoBehaviour
     /// <summary>True si hay carros esperando en la zona (para control actuado).</summary>
     public bool HasCars => cars.Count > 0;
 
+    /// <summary>Carros actualmente detenidos/en cola en esta aproximación (métrica).</summary>
+    public int WaitingCount
+    {
+        get
+        {
+            int n = 0;
+            foreach (var m in cars) if (m != null && m.IsQueued) n++;
+            return n;
+        }
+    }
+
     void Awake()
     {
         GetComponent<BoxCollider>().isTrigger = true;

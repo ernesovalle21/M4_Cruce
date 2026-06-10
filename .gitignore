@@ -70,3 +70,6 @@ crashlytics-build.properties
 # OS files
 .DS_Store
 Thumbs.db
+
+# Salidas de métricas en tiempo de ejecución
+Analisis/metrics_*.csv

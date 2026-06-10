@@ -332,6 +332,11 @@ public static class CorridorBuilder
         spawner.maxCars = 38;
         spawner.carSpeed = CarSpeed;
 
+        // ---- Métricas (HUD + CSV) ----
+        GameObject metricsGO = new GameObject("TrafficMetrics");
+        metricsGO.transform.SetParent(R, false);
+        metricsGO.AddComponent<TrafficMetrics>();
+
         // ---- Cámara ----
         Camera cam = Camera.main;
         if (cam == null)

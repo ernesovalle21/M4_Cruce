@@ -20,15 +20,33 @@ public class WaypointMover : MonoBehaviour
     private bool isStopped = false;
     private float currentSpeed = 0f;
 
+    // --- Métricas ---
+    private float waitTime = 0f;   // tiempo acumulado detenido/en cola
+    private float aliveTime = 0f;  // tiempo total de vida (viaje)
+    private bool completed = false;
+
+    public float CurrentSpeed => currentSpeed;
+    public bool IsQueued => currentSpeed < 0.15f; // prácticamente detenido
+
     public void SetStopped(bool val) { isStopped = val; }
     public int GetCurrentIndex() { return currentIndex; }
 
+    void OnDestroy()
+    {
+        if (completed && TrafficMetrics.Instance != null)
+            TrafficMetrics.Instance.ReportCompleted(waitTime, aliveTime);
+    }
+
     void Update()
     {
+        aliveTime += Time.deltaTime;
+        if (currentSpeed < 0.15f) waitTime += Time.deltaTime;
+
         if (waypoints == null || waypoints.Length == 0) return;
 
         if (currentIndex >= waypoints.Length)
         {
+            completed = true;
             Destroy(gameObject);
             return;
         }
@@ -88,7 +106,11 @@ public class WaypointMover : MonoBehaviour
             if (Vector3.Distance(transform.position, target.position) < stoppingDistance)
             {
                 currentIndex++;
-                if (currentIndex >= waypoints.Length) Destroy(gameObject);
+                if (currentIndex >= waypoints.Length)
+                {
+                    completed = true;
+                    Destroy(gameObject);
+                }
             }
         }
     }
