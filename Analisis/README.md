@@ -40,6 +40,21 @@ python3 build_notebook.py
 | Ancho de banda sentido inverso | 21 s (32% del ciclo) |
 | Progresión en verde (ideal) | 100% ambos sentidos |
 
+## Puente Python → Unity (integración)
+
+- **`export_playback.py`** — corre el modelo AgentPy y exporta **`playback.json`**
+  (posiciones de los vehículos y estado de los semáforos por frame).
+- En Unity: menú **M4Cruce > Reproducir Simulación Python (Bridge)** crea una escena
+  **aparte** (no toca el corredor nativo) que **reproduce** ese JSON: Unity dibuja en
+  3D lo que calculó Python.
+
+Flujo:
+```bash
+cd Analisis
+python3 export_playback.py     # genera playback.json
+```
+Luego en Unity: *M4Cruce > Reproducir Simulación Python (Bridge)* → Play.
+
 ## Resultados de la simulación (Unity)
 
 La sección "6b. Resultados" del notebook grafica los CSV que genera Unity y compara
