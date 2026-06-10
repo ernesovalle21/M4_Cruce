@@ -5,6 +5,10 @@ Complementa la simulación multiagente en Unity (`Assets/`).
 
 ## Contenido
 
+- **`SimulacionMultiagente_Elizondo.ipynb`** — **Simulación multiagente en AgentPy**
+  del corredor: vehículos y semáforos como agentes, onda verde, métricas (cola,
+  espera, throughput), **diagrama espacio–tiempo simulado**, animación y comparación
+  coordinado vs sin coordinar. (`build_sim_notebook.py` lo regenera.)
 - **`OndaVerde_Elizondo.ipynb`** — Notebook (Colab/Jupyter) que cubre los entregables
   de ingeniería de tráfico del reto:
   - Distancias entre los 3 cruces (García Roel, Junco, Garza Sada).
