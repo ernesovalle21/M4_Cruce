@@ -199,6 +199,7 @@ public static class CorridorBuilder
 
             bool isT = c.name == JuncoName;
             bool isS1 = c.name == S1Name;
+            bool isS3 = c.name == S3Name;          // García Roel (derecha)
             float cw = isS1 ? LeftWidth : RoadWidth; // ancho de la calle transversal
 
             if (isT)
@@ -321,17 +322,48 @@ public static class CorridorBuilder
                 };
                 entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 5f });
             }
-            else
+            else if (isS3)
             {
-                // Cruz completa de UN solo carril que sube (+Z). En S1 (izquierda) el
-                // carril va corrido a la izquierda para dejar pasar la vuelta de Elizondo.
+                // Fernando García Roel: DOBLE sentido (derecha sube +Z, izquierda baja -Z).
                 float southEnd = -(HalfInter + ArmLen) + 6f;
                 float northEnd =  (HalfInter + ArmLen) - 6f;
-                float lx = isS1 ? c.x - 2.5f : c.x;
+                float northStopZ = HalfInter + 4f;
+
+                // Carril derecho: SUBE (+Z), se detiene en el lado sur (semáforo existente)
+                var sube = new List<Transform>
+                {
+                    Wp("GR_Sube_0", new Vector3(c.x + 2.5f, 0f, southEnd),   crossWpRoot),
+                    Wp("GR_Sube_1", new Vector3(c.x + 2.5f, 0f, crossStopZ), crossWpRoot),
+                    Wp("GR_Sube_2", new Vector3(c.x + 2.5f, 0f, 11f),        crossWpRoot),
+                    Wp("GR_Sube_3", new Vector3(c.x + 2.5f, 0f, northEnd),   crossWpRoot),
+                };
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 6f });
+
+                // Carril izquierdo: BAJA (-Z), se detiene en el lado norte
+                var baja = new List<Transform>
+                {
+                    Wp("GR_Baja_0", new Vector3(c.x - 2.5f, 0f, northEnd),   crossWpRoot),
+                    Wp("GR_Baja_1", new Vector3(c.x - 2.5f, 0f, northStopZ), crossWpRoot),
+                    Wp("GR_Baja_2", new Vector3(c.x - 2.5f, 0f, -11f),       crossWpRoot),
+                    Wp("GR_Baja_3", new Vector3(c.x - 2.5f, 0f, southEnd),   crossWpRoot),
+                };
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 6f });
+
+                // Alto + semáforo (trigger) del lado norte para el sentido que baja
+                Cube(c.name + "_AltoCrossN", new Vector3(c.x, -0.03f, northStopZ), new Vector3(crossW, 0.01f, 0.9f), matLinea, G);
+                BuildStopLine(c.name + "_CrossN", new Vector3(c.x, 0f, northStopZ), new Vector3(crossW, 3f, 3f), tlCross, G);
+            }
+            else
+            {
+                // S1 (Garza Sada): un solo carril que sube (+Z), corrido a la izquierda
+                // para dejar pasar la vuelta de Elizondo.
+                float southEnd = -(HalfInter + ArmLen) + 6f;
+                float northEnd =  (HalfInter + ArmLen) - 6f;
+                float lx = c.x - 2.5f;
                 var sube = new List<Transform>
                 {
                     Wp($"{c.name}_Sube_0", new Vector3(lx, 0f, southEnd),   crossWpRoot),
-                    Wp($"{c.name}_Sube_1", new Vector3(lx, 0f, crossStopZ), crossWpRoot), // alto
+                    Wp($"{c.name}_Sube_1", new Vector3(lx, 0f, crossStopZ), crossWpRoot),
                     Wp($"{c.name}_Sube_2", new Vector3(lx, 0f,  11f),       crossWpRoot),
                     Wp($"{c.name}_Sube_3", new Vector3(lx, 0f, northEnd),   crossWpRoot),
                 };
@@ -451,6 +483,8 @@ public static class CorridorBuilder
                 float jx = bx + (float)(rng.NextDouble() * 4 - 2);
                 float jz = bz + (float)(rng.NextDouble() * 4 - 2);
                 if (OverlapsRoad(jx, jz, 4f)) continue;
+                // Reservar la zona del campus del Tec (entre Garza Sada y Junco, lado norte)
+                if (jx > -122f && jx < -8f && jz > 12f && jz < 100f) continue;
                 if (rng.NextDouble() < 0.25) continue;
 
                 float w = 5f + (float)rng.NextDouble() * 4f;
@@ -461,6 +495,9 @@ public static class CorridorBuilder
             }
         }
 
+        // Campus del Tec entre Junco (x=0) y Garza Sada (x=-130)
+        BuildCampus(S);
+
         for (float tx = RoadXMin + 6f; tx <= RoadXMax - 6f; tx += 9f)
         {
             foreach (float tz in new[] { -12f, 12f })
@@ -470,6 +507,33 @@ public static class CorridorBuilder
                 BuildTree(new Vector3(tx, 0f, tz), tronco, hojas, S);
             }
         }
+    }
+
+    private static void BuildCampus(Transform parent)
+    {
+        Material matCampus = GetOrCreateMat("Mat_Campus", new Color32(0x53, 0x68, 0x8f, 0xFF));      // azul-gris institucional
+        Material matQuad   = GetOrCreateMat("Mat_CampusVerde", new Color32(0x3f, 0x7a, 0x3a, 0xFF)); // explanada verde
+
+        GameObject g = new GameObject("Campus_Tec");
+        g.transform.SetParent(parent, false);
+
+        // Explanada/quad verde central del campus (lado norte, entre los dos cruces)
+        Cube("Campus_Quad", new Vector3(-65f, -0.06f, 45f), new Vector3(108f, 0.08f, 52f), matQuad, g.transform);
+
+        // Edificios grandes del campus en dos filas
+        float[] cxs = { -110f, -86f, -62f, -38f, -18f };
+        float[] czs = { 26f, 64f };
+        int i = 0;
+        foreach (float cz in czs)
+            foreach (float bx in cxs)
+            {
+                float h = 9f + ((i * 3) % 4) * 2f;
+                Cube($"Campus_Edif_{i}", new Vector3(bx, h * 0.5f, cz), new Vector3(15f, h, 16f), matCampus, g.transform);
+                i++;
+            }
+
+        // Edificio principal (la escuela) más grande al fondo
+        Cube("Campus_Principal", new Vector3(-62f, 9f, 90f), new Vector3(56f, 18f, 16f), matCampus, g.transform);
     }
 
     private static void BuildTree(Vector3 pos, Material tronco, Material hojas, Transform parent)
