@@ -5,6 +5,8 @@ using UnityEngine;
 public class StopLineTrigger : MonoBehaviour
 {
     public TrafficLight trafficLight;
+    [Tooltip("Centro del cruce: solo se detiene a los carros que van HACIA él.")]
+    public Vector3 intersectionCenter;
 
     private readonly List<WaypointMover> cars = new List<WaypointMover>();
 
@@ -55,12 +57,15 @@ public class StopLineTrigger : MonoBehaviour
             var mover = cars[i];
             if (mover == null) { cars.RemoveAt(i); continue; }
 
-            // Si el carro YA cruzó la línea de alto, que siga (no lo detengas
-            // aunque el semáforo esté en rojo) -> evita que se congele en el cruce.
-            Vector3 toLine = transform.position - mover.transform.position;
-            bool alreadyPassed = Vector3.Dot(mover.transform.forward, toLine) < 0f;
+            Vector3 f = mover.transform.forward;
+            Vector3 pos = mover.transform.position;
+            // Detener SOLO si: aún no cruza la línea Y va HACIA el centro del cruce.
+            // (Un carro que ya entró/salió del cruce, o que se aleja por la línea del
+            //  otro lado, NO se detiene -> evita que se queden parados tras pasar.)
+            bool lineAhead = Vector3.Dot(f, transform.position - pos) > 0f;
+            bool headingIntoIntersection = Vector3.Dot(f, intersectionCenter - pos) > 0f;
 
-            mover.SetStopped(red && !alreadyPassed);
+            mover.SetStopped(red && lineAhead && headingIntoIntersection);
         }
     }
 }

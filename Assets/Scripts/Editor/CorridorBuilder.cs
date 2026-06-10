@@ -240,7 +240,7 @@ public static class CorridorBuilder
 
             BuildCrosswalk(c.name + "_Eliz", new Vector3(c.x - Dir * (HalfInter + 2f), -0.03f, 0f), true, matLinea, G);
             Cube(c.name + "_AltoEliz", new Vector3(elizLightX, -0.03f, 0f), new Vector3(0.9f, 0.01f, RoadWidth), matLinea, G);
-            StopLineTrigger elizStop = BuildStopLine(c.name + "_Eliz", new Vector3(elizLightX, 0f, 0f), new Vector3(3f, 3f, RoadWidth), tlEliz, G);
+            StopLineTrigger elizStop = BuildStopLine(c.name + "_Eliz", new Vector3(elizLightX, 0f, 0f), new Vector3(3f, 3f, RoadWidth), tlEliz, new Vector3(c.x, 0f, 0f), G);
 
             // Semáforo transversal (contrafase). En S1 el tráfico sube (+Z): alto del lado sur.
             float crossOffset = Mathf.Repeat(offset + GreenDur + YellowDur + AllRed, cycle);
@@ -254,7 +254,7 @@ public static class CorridorBuilder
             float crossW = cw;
             BuildCrosswalk(c.name + "_Cross", new Vector3(c.x, -0.03f, crossSide * (HalfInter + 2f)), false, matLinea, G);
             Cube(c.name + "_AltoCross", new Vector3(c.x, -0.03f, crossStopZ), new Vector3(crossW, 0.01f, 0.9f), matLinea, G);
-            StopLineTrigger crossStop = BuildStopLine(c.name + "_Cross", new Vector3(c.x, 0f, crossStopZ), new Vector3(crossW, 3f, 3f), tlCross, G);
+            StopLineTrigger crossStop = BuildStopLine(c.name + "_Cross", new Vector3(c.x, 0f, crossStopZ), new Vector3(crossW, 3f, 3f), tlCross, new Vector3(c.x, 0f, 0f), G);
 
             if (coordinated)
             {
@@ -373,7 +373,7 @@ public static class CorridorBuilder
 
                 // Alto + semáforo (trigger) del lado norte para el sentido que baja
                 Cube(c.name + "_AltoCrossN", new Vector3(c.x, -0.03f, northStopZ), new Vector3(crossW, 0.01f, 0.9f), matLinea, G);
-                BuildStopLine(c.name + "_CrossN", new Vector3(c.x, 0f, northStopZ), new Vector3(crossW, 3f, 3f), tlCross, G);
+                BuildStopLine(c.name + "_CrossN", new Vector3(c.x, 0f, northStopZ), new Vector3(crossW, 3f, 3f), tlCross, new Vector3(c.x, 0f, 0f), G);
             }
             else
             {
@@ -746,7 +746,7 @@ public static class CorridorBuilder
         return rend;
     }
 
-    private static StopLineTrigger BuildStopLine(string name, Vector3 position, Vector3 size, TrafficLight tl, Transform parent)
+    private static StopLineTrigger BuildStopLine(string name, Vector3 position, Vector3 size, TrafficLight tl, Vector3 center, Transform parent)
     {
         GameObject go = new GameObject("StopLine_" + name);
         go.transform.SetParent(parent, false);
@@ -756,6 +756,7 @@ public static class CorridorBuilder
         bc.isTrigger = true;
         var slt = go.AddComponent<StopLineTrigger>();
         slt.trafficLight = tl;
+        slt.intersectionCenter = center;
         return slt;
     }
 
