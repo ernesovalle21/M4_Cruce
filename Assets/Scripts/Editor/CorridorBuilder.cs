@@ -395,6 +395,7 @@ public static class CorridorBuilder
                 n.StartsWith("Corredor_Elizondo") ||
                 n.StartsWith("Cruce_T") ||
                 n.StartsWith("CarSpawner") ||
+                n.StartsWith("PythonPlayback") ||   // quitar el bridge si estaba
                 n.Contains("(Clone)") ||
                 go.CompareTag("Car");
             if (kill) Object.DestroyImmediate(go);
