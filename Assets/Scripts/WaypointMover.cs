@@ -13,8 +13,8 @@ public class WaypointMover : MonoBehaviour
     // --- Seguimiento / anti-encimamiento (medido desde el frente) ---
     private const float FrontOffset = 2.2f;   // del centro al frente del carro
     private const float CheckRadius = 1.0f;   // medio ancho del "sensor"
-    private const float ScanDistance = 7f;    // qué tan adelante "ve"
-    private const float SafeGap = 3.0f;       // hueco al que se detiene del todo
+    private const float ScanDistance = 10f;   // qué tan adelante "ve" (más a mayor velocidad)
+    private const float SafeGap = 3.5f;       // hueco al que se detiene del todo
 
     private int currentIndex = 0;
     private bool isStopped = false;

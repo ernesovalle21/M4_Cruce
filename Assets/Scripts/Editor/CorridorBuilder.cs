@@ -186,7 +186,7 @@ public static class CorridorBuilder
             {
                 spawnTransform = path[0],
                 waypoints = path.ToArray(),
-                interval = 3.5f
+                interval = 5f
             });
         }
 
@@ -313,7 +313,7 @@ public static class CorridorBuilder
                     baja.Add(Wp($"Junco_Baja_Post_{cc.name}", new Vector3(PostX(cc.x), 0f, zMerge), crossWpRoot));
                 }
                 baja.Add(Wp("Junco_Baja_Salida", new Vector3(exitX, 0f, zMerge), crossWpRoot));
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 5f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 8f });
 
                 // Vuelta de ELIZONDO -> JUNCO: un carril entra por Elizondo (carril norte) y,
                 // al llegar a Junco, gira hacia arriba (+Z) por Junco.
@@ -329,7 +329,7 @@ public static class CorridorBuilder
                 eaj.Add(Wp("EaJ_Arc", new Vector3(4f, 0f, 7f), crossWpRoot));               // arco de vuelta
                 eaj.Add(Wp("EaJ_Up1", new Vector3(2.3f, 0f, 14f), crossWpRoot));            // sube por Junco
                 eaj.Add(Wp("EaJ_Up2", new Vector3(2.3f, 0f, 145f), crossWpRoot));           // salida arriba
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = eaj[0], waypoints = eaj.ToArray(), interval = 8f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = eaj[0], waypoints = eaj.ToArray(), interval = 11f });
 
                 // Junco es T: el tráfico entra desde arriba (baja y da vuelta a Elizondo) y
                 // también hay vuelta de Elizondo hacia Junco. No se generan carros en medio.
@@ -354,7 +354,7 @@ public static class CorridorBuilder
                 sube.Add(sg);
                 sube.Add(Wp("GR_Sube_2", new Vector3(c.x + 2.5f, 0f, 11f),      crossWpRoot));
                 sube.Add(Wp("GR_Sube_3", new Vector3(c.x + 2.5f, 0f, northEnd), crossWpRoot));
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 6f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 9f });
 
                 // Carril izquierdo: BAJA (-Z), alto en el norte + cede el paso antes de cruzar
                 var baja = new List<Transform>
@@ -369,7 +369,7 @@ public static class CorridorBuilder
                 baja.Add(bg);
                 baja.Add(Wp("GR_Baja_2", new Vector3(c.x - 2.5f, 0f, -11f),     crossWpRoot));
                 baja.Add(Wp("GR_Baja_3", new Vector3(c.x - 2.5f, 0f, southEnd), crossWpRoot));
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 6f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 9f });
 
                 // Alto + semáforo (trigger) del lado norte para el sentido que baja
                 Cube(c.name + "_AltoCrossN", new Vector3(c.x, -0.03f, northStopZ), new Vector3(crossW, 0.01f, 0.9f), matLinea, G);
@@ -389,7 +389,7 @@ public static class CorridorBuilder
                     Wp($"{c.name}_Sube_2", new Vector3(lx, 0f,  11f),       crossWpRoot),
                     Wp($"{c.name}_Sube_3", new Vector3(lx, 0f, northEnd),   crossWpRoot),
                 };
-                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 6f });
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 9f });
             }
         }
 
@@ -402,10 +402,12 @@ public static class CorridorBuilder
         CarSpawner spawner = spawnerGO.AddComponent<CarSpawner>();
         spawner.carPrefabs = LoadPrefabs();
         spawner.entries = entries.ToArray();
-        spawner.maxCars = 38;
+        spawner.maxCars = 22;        // por debajo de saturación -> se ve la onda verde, no gridlock
         spawner.carSpeed = CarSpeed;
         spawner.carBraking = 28f;   // frenado firme para no pasarse del alto a mayor velocidad
         spawner.carAccel = 12f;
+        spawner.minDensity = 0.5f;   // hora pico más suave para no saturar
+        spawner.maxDensity = 1.15f;
 
         // ---- Métricas (HUD + CSV) ----
         GameObject metricsGO = new GameObject("TrafficMetrics");
