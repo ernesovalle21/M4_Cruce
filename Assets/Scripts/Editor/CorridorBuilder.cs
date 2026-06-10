@@ -33,7 +33,7 @@ public static class CorridorBuilder
     private const float CrossGreen = 4f;
     private const float CrossYellow = 2f;
     private const float CrossRed = 14f;
-    private const float AllRed = 1f;            // colchón de todo-rojo
+    private const float AllRed = 2f;            // colchón de todo-rojo (clearance, sube por mayor velocidad)
 
     private const float RoadXMin = -180f;       // Elizondo extendida también a la izquierda
     private const float RoadXMax = 210f;        // Elizondo extendida más a la derecha
@@ -240,7 +240,7 @@ public static class CorridorBuilder
 
             BuildCrosswalk(c.name + "_Eliz", new Vector3(c.x - Dir * (HalfInter + 2f), -0.03f, 0f), true, matLinea, G);
             Cube(c.name + "_AltoEliz", new Vector3(elizLightX, -0.03f, 0f), new Vector3(0.9f, 0.01f, RoadWidth), matLinea, G);
-            BuildStopLine(c.name + "_Eliz", new Vector3(elizLightX, 0f, 0f), new Vector3(3f, 3f, RoadWidth), tlEliz, G);
+            StopLineTrigger elizStop = BuildStopLine(c.name + "_Eliz", new Vector3(elizLightX, 0f, 0f), new Vector3(3f, 3f, RoadWidth), tlEliz, G);
 
             // Semáforo transversal (contrafase). En S1 el tráfico sube (+Z): alto del lado sur.
             float crossOffset = Mathf.Repeat(offset + GreenDur + YellowDur + AllRed, cycle);
@@ -264,6 +264,7 @@ public static class CorridorBuilder
                 ctrl.major = tlEliz;
                 ctrl.minor = tlCross;
                 ctrl.minorStop = crossStop;
+                ctrl.majorStop = elizStop;
                 ctrl.cycle = cycle;
                 ctrl.armOffset = Mathf.Repeat(offset + GreenDur, cycle);
                 ctrl.yellow = YellowDur;
@@ -313,8 +314,25 @@ public static class CorridorBuilder
                 }
                 baja.Add(Wp("Junco_Baja_Salida", new Vector3(exitX, 0f, zMerge), crossWpRoot));
                 entries.Add(new CarSpawner.SpawnPoint { spawnTransform = baja[0], waypoints = baja.ToArray(), interval = 5f });
-                // Junco es T: TODO el tráfico entra desde arriba y da vuelta hacia Elizondo.
-                // (Se eliminó el carril que aparecía en medio.)
+
+                // Vuelta de ELIZONDO -> JUNCO: un carril entra por Elizondo (carril norte) y,
+                // al llegar a Junco, gira hacia arriba (+Z) por Junco.
+                const float zN = 4.5f;
+                var eaj = new List<Transform> { Wp("EaJ_0", new Vector3(entryX, 0f, zN), crossWpRoot) };
+                foreach (var cc in ordered)
+                {
+                    if (cc.x <= c.x) continue; // solo los cruces antes de Junco (lado de entrada)
+                    eaj.Add(Wp($"EaJ_Ante_{cc.name}", new Vector3(AnteX(cc.x), 0f, zN), crossWpRoot));
+                    eaj.Add(Wp($"EaJ_Post_{cc.name}", new Vector3(PostX(cc.x), 0f, zN), crossWpRoot));
+                }
+                eaj.Add(Wp("EaJ_AnteJunco", new Vector3(AnteX(c.x), 0f, zN), crossWpRoot)); // alto en Junco
+                eaj.Add(Wp("EaJ_Arc", new Vector3(4f, 0f, 7f), crossWpRoot));               // arco de vuelta
+                eaj.Add(Wp("EaJ_Up1", new Vector3(2.3f, 0f, 14f), crossWpRoot));            // sube por Junco
+                eaj.Add(Wp("EaJ_Up2", new Vector3(2.3f, 0f, 145f), crossWpRoot));           // salida arriba
+                entries.Add(new CarSpawner.SpawnPoint { spawnTransform = eaj[0], waypoints = eaj.ToArray(), interval = 8f });
+
+                // Junco es T: el tráfico entra desde arriba (baja y da vuelta a Elizondo) y
+                // también hay vuelta de Elizondo hacia Junco. No se generan carros en medio.
             }
             else if (isS3)
             {
@@ -386,6 +404,8 @@ public static class CorridorBuilder
         spawner.entries = entries.ToArray();
         spawner.maxCars = 38;
         spawner.carSpeed = CarSpeed;
+        spawner.carBraking = 28f;   // frenado firme para no pasarse del alto a mayor velocidad
+        spawner.carAccel = 12f;
 
         // ---- Métricas (HUD + CSV) ----
         GameObject metricsGO = new GameObject("TrafficMetrics");
@@ -556,19 +576,17 @@ public static class CorridorBuilder
 
     private static void BuildTheater(Transform parent)
     {
-        Material mt    = GetOrCreateMat("Mat_Teatro",     new Color32(0x6b, 0x47, 0x2e, 0xFF)); // estructura café
-        Material mtrim = GetOrCreateMat("Mat_TeatroTrim", new Color32(0xd8, 0xc8, 0xa0, 0xFF)); // detalles claros
+        // Todo el teatro de un mismo color café.
+        Material mt = GetOrCreateMat("Mat_Teatro", new Color32(0x6b, 0x47, 0x2e, 0xFF));
 
         GameObject g = new GameObject("Teatro");
         g.transform.SetParent(parent, false);
-        float tx = -30f, tz = -52f;   // debajo de la escuela (sur), lado derecho de la cuadra
+        float tx = -24f, tz = -52f;   // un poco más a la derecha, debajo de la escuela
 
-        Cube("Teatro_Sala",    new Vector3(tx, 11f, tz - 8f),  new Vector3(42f, 22f, 34f), mt, g.transform);     // bloque grande
-        Cube("Teatro_Techo",   new Vector3(tx, 22.8f, tz - 8f), new Vector3(45f, 1.6f, 36f), mtrim, g.transform); // cornisa
-        Cube("Teatro_Fachada", new Vector3(tx, 6f, tz + 11f),  new Vector3(46f, 12f, 7f), mt, g.transform);     // frente café
-        for (int k = 0; k < 5; k++)
-            Cube($"Teatro_Columna_{k}", new Vector3(tx - 18f + k * 9f, 4.5f, tz + 14.5f), new Vector3(1.8f, 9f, 1.8f), mtrim, g.transform);
-        Cube("Teatro_Escalones", new Vector3(tx, 0.3f, tz + 18f), new Vector3(40f, 0.6f, 5f), mtrim, g.transform);
+        Cube("Teatro_Sala",    new Vector3(tx, 11f, tz - 6f),  new Vector3(32f, 22f, 30f), mt, g.transform);   // bloque grande
+        Cube("Teatro_Techo",   new Vector3(tx, 22.6f, tz - 6f), new Vector3(34f, 1.6f, 32f), mt, g.transform); // cornisa
+        Cube("Teatro_Fachada", new Vector3(tx, 6f, tz + 11f),  new Vector3(34f, 12f, 8f), mt, g.transform);    // frente
+        Cube("Teatro_Escalones", new Vector3(tx, 0.4f, tz + 16f), new Vector3(30f, 0.8f, 4f), mt, g.transform);
     }
 
     private static void BuildPark(Transform parent, Material tronco, Material hojas)

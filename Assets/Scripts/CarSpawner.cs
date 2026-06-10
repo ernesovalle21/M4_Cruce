@@ -25,6 +25,10 @@ public class CarSpawner : MonoBehaviour
     public int maxCars = 8;
     [Tooltip("Velocidad que se asigna a cada carro al instanciarlo (0 = usar la del prefab).")]
     public float carSpeed = 0f;
+    [Tooltip("Frenado que se asigna a cada carro (0 = usar el del prefab).")]
+    public float carBraking = 0f;
+    [Tooltip("Aceleración que se asigna a cada carro (0 = usar la del prefab).")]
+    public float carAccel = 0f;
 
     [Header("Variación de tráfico (horas pico cíclicas)")]
     public bool rushHourCycle = true;
@@ -95,6 +99,8 @@ public class CarSpawner : MonoBehaviour
         if (mover == null) mover = car.AddComponent<WaypointMover>();
         mover.waypoints = sp.waypoints;
         if (carSpeed > 0f) mover.speed = carSpeed;
+        if (carBraking > 0f) mover.braking = carBraking;
+        if (carAccel > 0f) mover.acceleration = carAccel;
 
         var notifier = car.AddComponent<CarDestroyNotifier>();
         notifier.spawner = this;

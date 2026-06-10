@@ -16,6 +16,7 @@ public class IntersectionController : MonoBehaviour
     public TrafficLight major;        // Elizondo
     public TrafficLight minor;        // transversal
     public StopLineTrigger minorStop; // demanda de la transversal
+    public StopLineTrigger majorStop; // demanda de Elizondo (para ceder si está vacío)
 
     [Header("Tiempos (s)")]
     public float cycle = 20f;
@@ -24,6 +25,7 @@ public class IntersectionController : MonoBehaviour
     public float allRed = 1f;
     public float minorGreen = 4f;
     public float minMinorGreen = 1.5f; // verde mínimo antes de poder hacer gap-out
+    public float minMajorGreen = 4f;   // verde mínimo de Elizondo antes de poder ceder
 
     private enum S { MajorGreen, MajorYellow, AllRed1, MinorGreen, MinorYellow, AllRed2 }
     private S state;
@@ -52,8 +54,12 @@ public class IntersectionController : MonoBehaviour
         switch (state)
         {
             case S.MajorGreen:
-                // Solo cede el paso en el instante coordinado y si hay demanda transversal.
-                if (armTick && minorStop != null && minorStop.HasCars)
+                // Cede el paso a la transversal cuando hay demanda Y:
+                //   - es el instante coordinado de la onda verde (armTick), o
+                //   - Elizondo no tiene tráfico cerca (no tiene sentido hacerlos esperar).
+                bool minorDemanda = minorStop != null && minorStop.HasCars;
+                bool elizondoVacio = majorStop == null || !majorStop.HasCars;
+                if (t >= minMajorGreen && minorDemanda && (armTick || elizondoVacio))
                     Go(S.MajorYellow, major, TrafficLight.Phase.Yellow);
                 break;
 
