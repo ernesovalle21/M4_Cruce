@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -29,7 +30,16 @@ public static class PlaybackBuilder
         }
 
         GameObject root = new GameObject("PythonPlayback_Bridge");
-        root.AddComponent<PythonPlayback>();
+        var pb = root.AddComponent<PythonPlayback>();
+
+        // Cargar modelos de carro (Sedan/Suv) para el playback
+        var prefabs = new List<GameObject>();
+        foreach (string n in new[] { "Sedan", "Suv" })
+        {
+            var p = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/" + n + ".prefab");
+            if (p != null) prefabs.Add(p);
+        }
+        pb.carPrefabs = prefabs.ToArray();
 
         // Cámara
         Camera cam = Camera.main;

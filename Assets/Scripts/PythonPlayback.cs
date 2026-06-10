@@ -17,9 +17,12 @@ public class PythonPlayback : MonoBehaviour
 
     [Tooltip("Ruta del JSON. Si se deja vacío usa Analisis/playback.json del proyecto.")]
     public string jsonPath = "";
-    public float scale = 0.12f;            // metros -> unidades de escena
-    public float secondsPerFrame = 0.15f;  // velocidad de reproducción
+    [Tooltip("Modelos de carro (Sedan/Suv). Si está vacío usa cubos.")]
+    public GameObject[] carPrefabs;
+    public float scale = 0.5f;             // metros -> unidades de escena
+    public float secondsPerFrame = 0.13f;  // velocidad de reproducción
     public float laneZ = 0f;
+    public float carLengthUnits = 2.4f;    // largo objetivo del carro
     public bool loop = true;
 
     private PlaybackData data;
@@ -27,7 +30,7 @@ public class PythonPlayback : MonoBehaviour
     private float timer = 0f;
     private readonly List<GameObject> carPool = new List<GameObject>();
     private Renderer[] lightRends;
-    private Material matRed, matYel, matGrn, matCar, matRoad, matGrass;
+    private Material matRed, matYel, matGrn, matCar, matRoad, matGrass, matLinea;
 
     private float CenterM => (data.xEntry + data.xExit) * 0.5f;
     private float X(float meters) => (meters - CenterM) * scale;
@@ -53,12 +56,13 @@ public class PythonPlayback : MonoBehaviour
             return;
         }
 
-        matRed   = Mat(new Color(0.80f, 0.13f, 0f));
+        matRed   = Mat(new Color(0.85f, 0.13f, 0f));
         matYel   = Mat(new Color(1f, 0.80f, 0f));
-        matGrn   = Mat(new Color(0f, 0.80f, 0.27f));
+        matGrn   = Mat(new Color(0f, 0.85f, 0.30f));
         matCar   = Mat(new Color(0.20f, 0.40f, 0.90f));
         matRoad  = Mat(new Color(0.22f, 0.22f, 0.22f));
         matGrass = Mat(new Color(0.30f, 0.55f, 0.25f));
+        matLinea = Mat(Color.white);
 
         BuildScene();
         PlaceCamera();
@@ -83,17 +87,30 @@ public class PythonPlayback : MonoBehaviour
         return go;
     }
 
+    private GameObject Sphere(string name, Vector3 pos, float diam, Material mat)
+    {
+        var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        go.name = name; go.transform.SetParent(transform, false);
+        go.transform.localPosition = pos; go.transform.localScale = Vector3.one * diam;
+        var col = go.GetComponent<Collider>(); if (col != null) col.enabled = false;
+        go.GetComponent<Renderer>().sharedMaterial = mat;
+        return go;
+    }
+
     private void BuildScene()
     {
         float len = (data.xExit - data.xEntry) * scale;
-        Cube("PB_Pasto", new Vector3(0, -0.2f, 0), new Vector3(len + 40f, 0.1f, 50f), matGrass);
-        Cube("PB_Road", new Vector3(0, 0f, laneZ), new Vector3(len, 0.1f, 6f), matRoad);
+        float roadW = 7f;
+        Cube("PB_Pasto", new Vector3(0, -0.2f, 0), new Vector3(len + 60f, 0.1f, 90f), matGrass);
+        Cube("PB_Road", new Vector3(0, 0f, laneZ), new Vector3(len, 0.1f, roadW), matRoad);
+        Cube("PB_Linea", new Vector3(0, 0.03f, laneZ), new Vector3(len, 0.01f, 0.2f), matLinea);
 
         lightRends = new Renderer[data.xs.Length];
         for (int i = 0; i < data.xs.Length; i++)
         {
-            Cube("PB_Poste" + i, new Vector3(X(data.xs[i]), 1.5f, laneZ + 3.2f), new Vector3(0.5f, 3f, 0.5f), matRoad);
-            var foco = Cube("PB_Foco" + i, new Vector3(X(data.xs[i]), 3.4f, laneZ + 3.2f), Vector3.one * 1.2f, matRed);
+            float lx = X(data.xs[i]);
+            Cube("PB_Poste" + i, new Vector3(lx, 3f, laneZ + roadW * 0.5f + 1f), new Vector3(0.8f, 6f, 0.8f), matRoad);
+            var foco = Sphere("PB_Foco" + i, new Vector3(lx, 6.5f, laneZ + roadW * 0.5f + 1f), 2.6f, matRed);
             lightRends[i] = foco.GetComponent<Renderer>();
         }
 
@@ -101,10 +118,41 @@ public class PythonPlayback : MonoBehaviour
         foreach (var f in data.frames) if (f.cars != null && f.cars.Length > maxCars) maxCars = f.cars.Length;
         for (int i = 0; i < maxCars; i++)
         {
-            var car = Cube("PB_Car" + i, Vector3.zero, new Vector3(2.4f, 1f, 1.6f), matCar);
+            var car = MakeCar(i);
             car.SetActive(false);
             carPool.Add(car);
         }
+    }
+
+    private GameObject MakeCar(int idx)
+    {
+        if (carPrefabs != null && carPrefabs.Length > 0 && carPrefabs[idx % carPrefabs.Length] != null)
+        {
+            var car = Instantiate(carPrefabs[idx % carPrefabs.Length]);
+            car.name = "PB_Car" + idx;
+
+            // Solo visual: desactivar lógica de juego
+            var wm = car.GetComponent<WaypointMover>(); if (wm) wm.enabled = false;
+            var cc = car.GetComponent<CarCollision>(); if (cc) cc.enabled = false;
+            var rb = car.GetComponent<Rigidbody>(); if (rb) rb.isKinematic = true;
+            foreach (var col in car.GetComponentsInChildren<Collider>()) col.enabled = false;
+            car.tag = "Untagged";
+
+            // Normalizar tamaño al objetivo usando los bounds del modelo
+            var rends = car.GetComponentsInChildren<Renderer>();
+            if (rends.Length > 0)
+            {
+                Bounds b = rends[0].bounds;
+                foreach (var r in rends) b.Encapsulate(r.bounds);
+                float lengthNow = Mathf.Max(b.size.x, b.size.z);
+                if (lengthNow > 0.001f) car.transform.localScale *= carLengthUnits / lengthNow;
+            }
+
+            car.transform.SetParent(transform, false);
+            car.transform.localRotation = Quaternion.Euler(0f, 90f, 0f); // frente +Z -> +X
+            return car;
+        }
+        return Cube("PB_Car" + idx, Vector3.zero, new Vector3(carLengthUnits, 0.9f, carLengthUnits * 0.55f), matCar);
     }
 
     private void PlaceCamera()
@@ -112,8 +160,8 @@ public class PythonPlayback : MonoBehaviour
         var cam = Camera.main;
         if (cam == null) return;
         float len = (data.xExit - data.xEntry) * scale;
-        cam.transform.position = new Vector3(0f, len * 0.55f, -len * 0.5f);
-        cam.transform.rotation = Quaternion.Euler(52f, 0f, 0f);
+        cam.transform.position = new Vector3(0f, len * 0.42f, -len * 0.45f);
+        cam.transform.rotation = Quaternion.Euler(45f, 0f, 0f);
     }
 
     void Update()
@@ -136,10 +184,10 @@ public class PythonPlayback : MonoBehaviour
         {
             if (i < n)
             {
-                carPool[i].SetActive(true);
-                carPool[i].transform.localPosition = new Vector3(X(f.cars[i]), 0.5f, laneZ);
+                if (!carPool[i].activeSelf) carPool[i].SetActive(true);
+                carPool[i].transform.localPosition = new Vector3(X(f.cars[i]), 0.05f, laneZ);
             }
-            else carPool[i].SetActive(false);
+            else if (carPool[i].activeSelf) carPool[i].SetActive(false);
         }
     }
 
