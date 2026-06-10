@@ -36,14 +36,14 @@ public static class CorridorBuilder
     private const float AllRed = 1f;            // colchón de todo-rojo
 
     private const float RoadXMin = -150f;       // tramo aún más largo
-    private const float RoadXMax = 160f;
+    private const float RoadXMax = 210f;        // Elizondo extendida más a la derecha
     private const float RoadWidth = 14f;
     private static readonly float[] LaneZ = { -4.5f, 0f, 4.5f };
     private const float HalfInter = 7f;
     private const float Bz = RoadWidth * 0.5f + 2f;
 
     // Longitud de los brazos de las calles transversales (calles más largas)
-    private const float ArmLen = 190f;    // longitud de los brazos transversales (llenan el verde)
+    private const float ArmLen = 170f;    // longitud de los brazos transversales (llenan el verde)
     private const float LeftWidth = 10f;  // calle izquierda (Garza Sada): angosta, 1 carril
 
     private struct Cross
@@ -106,7 +106,7 @@ public static class CorridorBuilder
         float roadCenterX = (RoadXMin + RoadXMax) * 0.5f;
         float roadLen = RoadXMax - RoadXMin;
 
-        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 180f, 0.1f, 440f), matPasto, R);
+        Cube("Pasto", new Vector3(roadCenterX, -0.08f, 0f), new Vector3(roadLen + 180f, 0.1f, 400f), matPasto, R);
         Cube("Elizondo_Road", new Vector3(roadCenterX, -0.05f, 0f), new Vector3(roadLen, 0.1f, RoadWidth), matAsfalto, R);
 
         // Banquetas segmentadas
@@ -261,7 +261,7 @@ public static class CorridorBuilder
                 const float zMerge = 0f;
                 var baja = new List<Transform>
                 {
-                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 185f), crossWpRoot),
+                    Wp("Junco_Baja_0", new Vector3(-2.3f, 0f, 165f), crossWpRoot),
                     Wp("Junco_Baja_1", new Vector3(-2.3f, 0f, 11f), crossWpRoot), // alto (semáforo)
                     Wp("Junco_Baja_2", new Vector3(-2.3f, 0f, 7f),  crossWpRoot),
                 };
@@ -286,7 +286,7 @@ public static class CorridorBuilder
                 var sube = new List<Transform>
                 {
                     Wp("Junco_Sube_0", new Vector3(2.3f, 0f, 12f), crossWpRoot),
-                    Wp("Junco_Sube_1", new Vector3(2.3f, 0f, 185f), crossWpRoot),
+                    Wp("Junco_Sube_1", new Vector3(2.3f, 0f, 165f), crossWpRoot),
                 };
                 entries.Add(new CarSpawner.SpawnPoint { spawnTransform = sube[0], waypoints = sube.ToArray(), interval = 5f });
             }
@@ -328,7 +328,7 @@ public static class CorridorBuilder
             camGO.tag = "MainCamera";
             cam = camGO.AddComponent<Camera>();
         }
-        cam.transform.position = new Vector3(-5f, 295f, -190f);
+        cam.transform.position = new Vector3(15f, 285f, -185f);
         cam.transform.rotation = Quaternion.Euler(57f, 0f, 0f);
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
@@ -402,7 +402,7 @@ public static class CorridorBuilder
 
         var rng = new System.Random(12345);
 
-        float[] zRows = { -25f, -50f, -78f, -110f, -148f, -185f, 25f, 50f, 78f, 110f, 148f, 185f };
+        float[] zRows = { -25f, -52f, -82f, -115f, -150f, -170f, 25f, 52f, 82f, 115f, 150f, 170f };
         for (float bx = RoadXMin + 4f; bx <= RoadXMax - 4f; bx += 13f)
         {
             foreach (float bz in zRows)
