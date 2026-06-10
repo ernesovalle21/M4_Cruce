@@ -132,6 +132,8 @@ public static class CorridorBuilder
         };
         Material matTronco = GetOrCreateMat("Mat_Tronco", new Color32(0x6B, 0x4A, 0x2E, 0xFF));
         Material matHojas  = GetOrCreateMat("Mat_Hojas",  new Color32(0x2F, 0x6E, 0x2F, 0xFF));
+        Material matLineaAmarilla = GetOrCreateMat("Mat_LineaAmarilla", new Color32(0xE8, 0xB4, 0x00, 0xFF));
+        Material matLetrero       = GetOrCreateMat("Mat_Letrero",       new Color32(0x1F, 0x6B, 0x3A, 0xFF));
         AssetDatabase.SaveAssets();
 
         GameObject root = new GameObject(RootName);
@@ -155,20 +157,53 @@ public static class CorridorBuilder
         BuildSidewalk("Banqueta_Norte",  Bz, northGaps, R, matBanqueta);
         BuildSidewalk("Banqueta_Sur",   -Bz, southGaps, R, matBanqueta);
 
-        Cube("Linea_Div_N",    new Vector3(roadCenterX, -0.045f,  2.25f), new Vector3(roadLen, 0.01f, 0.25f), matLinea, R);
-        Cube("Linea_Div_S",    new Vector3(roadCenterX, -0.045f, -2.25f), new Vector3(roadLen, 0.01f, 0.25f), matLinea, R);
-        Cube("Linea_Orilla_N", new Vector3(roadCenterX, -0.045f,  6.8f),  new Vector3(roadLen, 0.01f, 0.3f),  matLinea, R);
-        Cube("Linea_Orilla_S", new Vector3(roadCenterX, -0.045f, -6.8f),  new Vector3(roadLen, 0.01f, 0.3f),  matLinea, R);
+        // García Roel marca el INICIO de Av. Luis Elizondo. El tramo de entrada (antes
+        // de García Roel) es JESÚS CANTÚ: calle de DOS SENTIDOS y 2 carriles.
+        float garciaRoelX = 0f;
+        foreach (var cc in Crosses) if (cc.name == S3Name) garciaRoelX = cc.x;
+        float elizA = (Dir < 0) ? RoadXMin : garciaRoelX;
+        float elizB = (Dir < 0) ? garciaRoelX : RoadXMax;
+        float elizCx = (elizA + elizB) * 0.5f, elizLen = elizB - elizA;
+        float jcA = ((Dir < 0) ? garciaRoelX : RoadXMin) + HalfInter;
+        float jcB = ((Dir < 0) ? RoadXMax : garciaRoelX) - HalfInter;
+        float jcCx = (jcA + jcB) * 0.5f, jcLen = jcB - jcA;
 
-        // Flechas de sentido (apuntan según Dir)
+        // Elizondo: divisores de los 3 carriles (blanco), SOLO en el tramo de Elizondo
+        Cube("Eliz_Div_N", new Vector3(elizCx, -0.045f,  2.25f), new Vector3(elizLen, 0.01f, 0.25f), matLinea, R);
+        Cube("Eliz_Div_S", new Vector3(elizCx, -0.045f, -2.25f), new Vector3(elizLen, 0.01f, 0.25f), matLinea, R);
+        // Jesús Cantú: doble línea amarilla central (separa los dos sentidos)
+        Cube("JesusCantu_Doble_N", new Vector3(jcCx, -0.045f,  0.45f), new Vector3(jcLen, 0.01f, 0.18f), matLineaAmarilla, R);
+        Cube("JesusCantu_Doble_S", new Vector3(jcCx, -0.045f, -0.45f), new Vector3(jcLen, 0.01f, 0.18f), matLineaAmarilla, R);
+        // Orillas (ambas calles)
+        Cube("Linea_Orilla_N", new Vector3(roadCenterX, -0.045f,  6.8f), new Vector3(roadLen, 0.01f, 0.3f), matLinea, R);
+        Cube("Linea_Orilla_S", new Vector3(roadCenterX, -0.045f, -6.8f), new Vector3(roadLen, 0.01f, 0.3f), matLinea, R);
+
+        // Flechas de sentido de Elizondo (un solo sentido, 3 carriles)
         float arrowYaw = Dir < 0 ? 180f : 0f;
         for (float ax = RoadXMin + 18f; ax <= RoadXMax - 18f; ax += 24f)
         {
             bool nearCross = false;
             foreach (var c in Crosses) if (Mathf.Abs(ax - c.x) < 12f) nearCross = true;
             if (nearCross) continue;
+            bool enJesusCantu = (Dir < 0) ? ax > garciaRoelX : ax < garciaRoelX;
+            if (enJesusCantu) continue;     // Jesús Cantú lleva flechas de dos sentidos
             foreach (float z in LaneZ) BuildArrow(ax, z, arrowYaw, R, matLinea);
         }
+        // Jesús Cantú: flechas de DOS SENTIDOS (un carril entra a Elizondo, otro sale)
+        float yawInto = Dir < 0 ? 180f : 0f;   // hacia Elizondo
+        float yawAway = Dir < 0 ? 0f : 180f;   // sentido contrario
+        for (float ax = jcA + 10f; ax <= jcB - 10f; ax += 20f)
+        {
+            BuildArrow(ax,  3.5f, yawAway, R, matLinea);
+            BuildArrow(ax, -3.5f, yawInto, R, matLinea);
+        }
+
+        // Letreros de calle: Jesús Cantú (entrada) y Av. Luis Elizondo (tras García Roel)
+        float signZ = -(Bz + 1.5f);
+        float jcSignX = (Dir < 0) ? (RoadXMax - 14f) : (RoadXMin + 14f);
+        float ezSignX = garciaRoelX + Dir * 16f;
+        BuildSign("Jesus Cantu", new Vector3(jcSignX, 0f, signZ), matSemCaja, matLetrero, R);
+        BuildSign("Av. Luis Elizondo", new Vector3(ezSignX, 0f, signZ), matSemCaja, matLetrero, R);
 
         // Orden de cruces según el sentido de avance; el primero define la onda verde
         var ordered = new List<Cross>(Crosses);
@@ -684,6 +719,38 @@ public static class CorridorBuilder
         float cx = (x0 + x1) * 0.5f;
         float len = x1 - x0;
         Cube(name, new Vector3(cx, 0f, z), new Vector3(len, 0.2f, 4f), mat, parent);
+    }
+
+    private static void BuildSign(string text, Vector3 basePos, Material post, Material board, Transform parent)
+    {
+        GameObject g = new GameObject("Letrero_" + text.Replace(" ", "_").Replace(".", ""));
+        g.transform.SetParent(parent, false);
+        g.transform.localPosition = basePos;
+
+        Cube("Poste", new Vector3(0f, 2f, 0f), new Vector3(0.25f, 4f, 0.25f), post, g.transform);
+        Cube("Tablero", new Vector3(0f, 3.8f, 0f), new Vector3(8f, 1.4f, 0.2f), board, g.transform);
+
+        GameObject t = new GameObject("Texto");
+        t.transform.SetParent(g.transform, false);
+        t.transform.localPosition = new Vector3(0f, 3.8f, -0.16f);   // al frente (hacia -Z, la cámara)
+        t.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);  // texto mirando a la cámara
+
+        var tm = t.AddComponent<TextMesh>();
+        tm.text = text;
+        tm.anchor = TextAnchor.MiddleCenter;
+        tm.alignment = TextAlignment.Center;
+        tm.characterSize = 0.35f;
+        tm.fontSize = 48;
+        tm.color = Color.white;
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        if (font == null) font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        if (font != null)
+        {
+            tm.font = font;
+            var mr = t.GetComponent<MeshRenderer>();
+            if (mr == null) mr = t.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = font.material;
+        }
     }
 
     private static void BuildArrow(float x, float z, float yaw, Transform parent, Material mat)
