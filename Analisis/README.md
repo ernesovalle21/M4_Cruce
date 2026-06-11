@@ -18,18 +18,15 @@ Complementa la simulación multiagente en Unity (`Assets/`).
   - **Diagrama espacio–tiempo** con bandas verdes y trayectorias (entregable clave).
   - **Ancho de banda** y **evaluación de progresión** (¿llega en verde?).
   - Escenarios de demanda mañana/mediodía/tarde (estimados, sustituir por datos reales).
+  - Resultados de Unity (coordinado vs sin coordinar) y **MDP + heurística + Q-learning** (§7).
   - Conclusiones que responden las preguntas clave del reto.
-- **`build_notebook.py`** — Script que regenera el `.ipynb` (reproducible).
+- **`rl_coordinacion.py`** — Modelo real de control (MDP, heurística J y Q-learning),
+  embebido en la sección 7 del notebook consolidado.
 
 ## Cómo usar
 
-Opción A — Colab/Jupyter: subir `OndaVerde_Elizondo.ipynb` y ejecutar todas las celdas.
-
-Opción B — regenerar el notebook:
-```bash
-cd Analisis
-python3 build_notebook.py
-```
+Colab/Jupyter: subir `OndaVerde_Elizondo.ipynb` y ejecutar todas las celdas. Para los
+resultados de Unity, colocar los CSV en `Csv_Archivos/` (o en la misma carpeta).
 
 ## Resultados (con los parámetros actuales)
 

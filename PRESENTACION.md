@@ -16,11 +16,12 @@
 - `README.md`, `Analisis/ESTADO_PROYECTO.md` — índice y estado del proyecto.
 
 **Python — análisis y RL** (carpeta `Analisis/`)
-- `OndaVerde_Elizondo.ipynb` — offsets, diagramas espacio–tiempo, ancho de banda.
+- `OndaVerde_Elizondo.ipynb` — **notebook consolidado**: offsets, diagramas
+  espacio–tiempo, ancho de banda, escenarios de demanda, resultados de Unity y
+  **MDP + heurística (J) + Q-learning** (§7, modelo real).
 - `SimulacionMultiagente_Elizondo.ipynb` — modelo multiagente AgentPy (vehículos +
   semáforos, comunicación, origen–destino).
-- `Aprendizaje_Coordinacion_Elizondo.ipynb` — **MDP + heurística (J) + Q-learning**.
-- `rl_coordinacion.py` — entorno + métodos de control (código fuente del notebook RL).
+- `rl_coordinacion.py` — entorno + métodos de control (fuente del RL, embebido en §7).
 - `export_playback.py` — puente Python→Unity (genera `playback.json`).
 
 **Figuras** (carpeta `Analisis/figs/`)
@@ -255,14 +256,19 @@ coordinar. Lo vemos consistente en el análisis, en AgentPy y en Unity."
 
 ## Diapositiva 14 — Simulación Unity (demo)
 - Corredor 3D real: 3 cruces, banquetas, **cruces peatonales**, campus, teatro, parque.
-- Semáforos coordinados por onda verde + **extensión de verde por cola alta**.
+- Unity ejecuta **EN VIVO la heurística** (control coordinado-actuado + **extensión de
+  verde por cola alta**, la función J).
+- El **MDP y Q-learning** se implementan y **entrenan en Python** (offline); existe un
+  **puente** que lleva la simulación a Unity en 3D.
 - Métricas en vivo (HUD) y exportación a CSV.
 
-**[Visual]** captura de la escena (o **demo en vivo**: dar Play).
+**[Visual]** captura de la escena (o **demo en vivo**: *M4Cruce → Construir Corredor
+(Limpio) → Play*).
 
-**Guion:** "En Unity se ve el corredor funcionando: los autos pasan los 3 semáforos sin
-parar cuando la onda verde está activa. Aquí está integrada la heurística de extender
-el verde." *(Si hay demo: dar Play unos segundos.)*
+**Guion (exacto, sin exagerar):** "Unity corre en vivo la heurística coordinada-actuada
+—la de la función J, con extensión de verde por cola alta—. El MDP y Q-learning los
+implementamos y entrenamos en Python, y un puente lleva la simulación a Unity en 3D.
+Conectar el control aprendido en vivo es nuestro trabajo a futuro." *(Dar Play unos seg.)*
 
 ---
 
@@ -307,6 +313,20 @@ aprende puede mejorarlo aún más." → **¿Preguntas?**
 ## Función J (para citarla exacta)
 **J = w₁·colas + w₂·paradas + w₃·error_coordinación** — minimizar J = menos colas,
 menos paradas, menor ruptura de la onda verde.
+
+## Arquitectura: qué corre dónde (para preguntas)
+| Componente | Python (`Analisis/`) | Unity (`Assets/`) |
+|---|:---:|:---:|
+| Heurística (función J, extensión de verde) | ✅ | ✅ **en vivo** (`IntersectionController.cs`) |
+| Onda verde / offsets | ✅ | ✅ (`TrafficLight.cs`) |
+| MDP (formulación) | ✅ (`rl_coordinacion.py`) | ❌ |
+| Q-learning (entrenamiento) | ✅ (`rl_coordinacion.py`, notebook) | ❌ (offline) |
+| Puente Python→Unity (playback) | ✅ (`export_playback.py`) | ✅ (`PythonPlayback.cs`) |
+
+> **Mensaje:** cada método tiene su "casa". Python = laboratorio de control (formular
+> MDP, entrenar Q-learning). Unity = visualización 3D que corre la heurística en vivo.
+> Conectar el control aprendido a Unity en vivo = **trabajo a futuro** (no afirmar que
+> ya está). El RL **se entrena fuera de línea**: es lo normal, no un hueco.
 
 ## Reparto sugerido (3 personas)
 - **Persona A** (problema y contexto): slides 1–5.

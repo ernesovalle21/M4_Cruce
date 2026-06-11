@@ -30,10 +30,11 @@ Assets/Scripts/            # Simulación Unity (C#)
   Editor/PlaybackBuilder.cs  - arma la escena del puente Python→Unity
 
 Analisis/                  # Python
-  OndaVerde_Elizondo.ipynb            - offsets + diagramas espacio-tiempo + ancho de banda + resultados
+  OndaVerde_Elizondo.ipynb            - notebook consolidado: offsets + espacio-tiempo + ancho de banda + demanda + resultados Unity + Q-learning (§7)
   SimulacionMultiagente_Elizondo.ipynb- simulación AgentPy (agentes, comunicación, origen-destino)
+  rl_coordinacion.py                  - MDP + heurística + Q-learning (modelo real, embebido en §7)
   export_playback.py                  - genera playback.json para el puente Unity
-  build_notebook.py / build_sim_notebook.py - regeneran los notebooks
+  build_sim_notebook.py               - regenera el notebook de AgentPy
   ESTADO_PROYECTO.md                  - auditoría vs rúbrica
   figs/                               - figuras exportadas (se generan al correr)
 ```

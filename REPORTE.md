@@ -149,7 +149,7 @@ Sobre este MDP se comparan **tres métodos**:
 3. **Q-learning** — *aprende* la política `argmaxₐ Q(s,a)` con
    `Q(s,a) ← Q(s,a) + α[r + γ·maxₐ' Q(s',a') − Q(s,a)]`, usando `−J` como recompensa.
 
-Implementación: `Analisis/rl_coordinacion.py` y `Analisis/Aprendizaje_Coordinacion_Elizondo.ipynb`.
+Implementación: `Analisis/rl_coordinacion.py` (modelo real, embebido en el notebook `Analisis/OndaVerde_Elizondo.ipynb`, sección 7).
 En Unity, la heurística está integrada en `IntersectionController.cs` (extensión de
 verde por cola alta) para la demo en vivo.
 
@@ -182,10 +182,19 @@ modo sin coordinar. En el modelo distribuido se intercambiaron **mensajes entre
 semáforos** y la onda verde emergió de esa comunicación. En el escenario
 origen–destino, ~61% de los vehículos cruzó el corredor completo y ~39% giró.
 
-**Simulación Unity (modo coordinado, corrida de ejemplo ~309 s):** ~162 carros
-completados, throughput ≈ 31.5 veh/min, espera promedio ≈ 5.4 s/carro, cola
-promedio 2.15 (máx 6). *(Pendiente: capturar una corrida "sin coordinar" equivalente
-para la comparación final en Unity — ver `Analisis/metrics_*_sin_coordinar.csv`.)*
+**Simulación Unity — corridas de IGUAL duración (~180 s), coordinado vs sin coordinar:**
+
+| Métrica (Unity) | Coordinado | Sin coordinar | Mejora |
+|---|---:|---:|---:|
+| Autos completados | 69 | 60 | **+15 %** |
+| Throughput (veh/min) | 22.99 | 19.97 | **+15 %** |
+| Espera promedio (s/auto) | 5.40 | 6.89 | **−22 %** |
+| Cola promedio | 1.71 | 2.13 | **−20 %** |
+| Cola máxima | 7 | 7 | = |
+
+La coordinación (onda verde actuada) mejora throughput, espera y cola frente al ciclo
+fijo sin coordinar, de forma consistente con el análisis de ancho de banda y AgentPy.
+Datos en `Analisis/metrics_*_coordinado.csv` y `metrics_*_sin_coordinar.csv`.
 
 ### 3.3 Comparativa de métodos de control: tiempo fijo vs heurística vs Q-learning
 
@@ -255,7 +264,7 @@ contrafase; seed de evaluación **fuera** del entrenamiento de Q-learning):
 
 ### Anexos
 - Código: repositorio GitHub (Unity en `Assets/`, Python en `Analisis/`).
-- Métodos de control / RL: `Analisis/rl_coordinacion.py`, `Analisis/Aprendizaje_Coordinacion_Elizondo.ipynb`.
+- Métodos de control / RL: `Analisis/rl_coordinacion.py` (embebido en `Analisis/OndaVerde_Elizondo.ipynb`, §7).
 - Figuras: `Analisis/figs/` (espacio–tiempo, comparación J, curva de aprendizaje).
 - Métricas Unity: `Analisis/metrics_*.csv`.
 - Auditoría/estado: `Analisis/ESTADO_PROYECTO.md`.

@@ -1,0 +1,17 @@
+metrica,valor
+tiempo_simulado_s,180.1
+carros_completados,69
+throughput_veh_min,22.99
+espera_promedio_s,5.40
+viaje_promedio_s,54.72
+cola_promedio,1.71
+cola_maxima,7
+
+interseccion,cola_promedio,cola_maxima
+S1_Izq_GarzaSada_Cross,0.23,1
+S1_Izq_GarzaSada_Eliz,0.12,2
+S2_JuncoT_Cross,0.22,1
+S3_Der_GarciaRoel_Cross,0.39,1
+S3_Der_GarciaRoel_Eliz,0.29,2
+S3_Der_GarciaRoel_CrossN,0.26,1
+S2_JuncoT_Eliz,0.20,2
